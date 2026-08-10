@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminar credencial · Foto Graciela</title>
+<style>
+  :root{ --tinta:#241d16; --papel:#f6efe5; --acento:#c5572a; --ok:#1f7a4d; --linea:#e6ddd0; --muted:#8a7a66; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--papel);color:var(--tinta);font-family:"Segoe UI",system-ui,-apple-system,sans-serif}
+  header{background:var(--tinta);color:var(--papel);padding:14px 18px;display:flex;align-items:center;gap:10px}
+  header b{font-size:16px;letter-spacing:.02em}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 16px}
+  .cols{display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start}
+  @media(max-width:820px){ .cols{grid-template-columns:1fr} }
+  .previa{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px;text-align:center}
+  .previa canvas{max-width:100%;height:auto;border-radius:6px}
+  .panel{background:#fffdf9;border:1px solid var(--linea);border-radius:12px;padding:16px}
+  .campo{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--linea)}
+  .campo:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+  .campo h3{margin:0 0 8px;font-size:15px}
+  .sub-foto{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+  .mini{width:56px;height:56px;border-radius:8px;background:#eee center/cover no-repeat;border:1px solid var(--linea);flex:none}
+  .b{padding:9px 14px;border:none;border-radius:9px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;background:#efe7d9;color:var(--tinta)}
+  .b.pri{background:var(--acento);color:#fff}
+  .b.ok{background:var(--ok);color:#fff}
+  .b.gr{width:100%;padding:14px;font-size:16px;margin-top:10px}
+  .ctrl{margin-top:8px}
+  .ctrl label{display:block;font-size:12px;color:var(--muted);margin:6px 0 2px;font-weight:600}
+  .ctrl input[type=range]{width:100%}
+  .rotval{font-weight:700;color:var(--acento)}
+  .estado{text-align:center;padding:40px 20px}
+  .rueda{width:42px;height:42px;border:4px solid #e6ddd0;border-top-color:var(--acento);border-radius:50%;margin:0 auto 14px;animation:giro 1s linear infinite}
+  @keyframes giro{to{transform:rotate(360deg)}}
+  .aviso{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+  .aviso.on{opacity:1}
+  .info{background:#f2ece1;border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted);margin-bottom:14px}
+</style>
+</head>
+<body>
+<header><b>🎫 Terminar credencial · Foto Graciela</b></header>
+<div class="wrap" id="wrap">
+  <div class="estado"><div class="rueda"></div><p>Cargando la credencial…</p></div>
+</div>
+<div class="aviso" id="aviso"></div>
+
+<script src="credenciales-plantillas.js"></script>
+<script src="credenciales-motor.js"></script>
+<script>
+(function(){
+'use strict';
+var CRED_BACKEND = "https://script.google.com/macros/s/AKfycbxN01-DfwGkwwfilu6lfk_AYMMLa1S2SfJCkKYRMOYve948MtRB93N9blMU9vamD72I/exec";
+var $ = function(s){ return document.querySelector(s); };
+var wrap = $('#wrap');
+var folio = new URLSearchParams(location.search).get('folio') || '';
+var D = (window.PLANTILLAS_BASE || { escuelas: [] });
+var E = null, plt = null, V = {}, meta = {};
+
+function aviso(t){ var a=$('#aviso'); a.textContent=t; a.classList.add('on'); setTimeout(function(){a.classList.remove('on');},2200); }
+
+if (!folio){ wrap.innerHTML = '<h1>Falta el folio</h1><p class="sub">Abre esta página desde el Punto de Venta.</p>'; return; }
+
+// 1) Traer los datos guardados de la credencial pendiente
+fetch(CRED_BACKEND, {
+  method:'POST', redirect:'follow',
+  headers:{'Content-Type':'text/plain;charset=utf-8'},
+  body: JSON.stringify({ action:'credpend', folio: folio })
+}).then(function(r){ return r.json(); }).then(function(res){
+  if (!res || !res.ok){ throw new Error(res && res.error || 'error'); }
+  meta = res.datos || {};
+  V = meta.valores || {};
+  // Buscar la escuela y la plantilla por código y documento
+  E = (D.escuelas||[]).find(function(e){
+    return (e.codigo && meta.codigo && e.codigo.toUpperCase()===String(meta.codigo).toUpperCase()) || e.id===meta.codigo;
+  });
+  if (E) plt = (E.plantillas||[]).find(function(p){ return p.id===meta.plantillaId || p.nombre===meta.documento; });
+  if (!E || !plt){ throw new Error('sin_plantilla'); }
+  montar();
+}).catch(function(err){
+  wrap.innerHTML = '<h1>No se pudo cargar</h1><p class="sub">'+
+    (err && err.message==='sin_plantilla' ? 'No encontré la plantilla de esta escuela en este equipo. Asegúrate de tener la versión más reciente.' :
+     'No se encontraron los datos de esta credencial. Puede que ya se haya terminado.')+'</p>';
+});
+
+// Campos de foto que faltan (los que quedaron marcados como estudio)
+function fotosEstudio(){
+  return (plt.campos||[]).filter(function(c){
+    return c.tipo==='foto' && V[c.id] && V[c.id].estudio;
+  });
+}
+
+function montar(){
+  var pend = fotosEstudio();
+  var h = '<h1>'+esc(E.corto||E.nombre)+' · '+esc(plt.nombre)+'</h1>'+
+    '<p class="sub">Titular: <b>'+esc(nombreTitular())+'</b>'+(meta && metaTel()? ' · 📞 '+esc(metaTel()):'')+'</p>'+
+    '<div class="cols">'+
+      '<div class="previa"><canvas id="lienzo"></canvas></div>'+
+      '<div class="panel" id="panel"></div>'+
+    '</div>';
+  wrap.innerHTML = h;
+
+  var panel = $('#panel');
+  var ph = '<div class="info">Sube la fotograf\u00eda que tomaste en el estudio y encu\u00e1drala. Cuando quede bien, presiona <b>Terminar</b>.</div>';
+  pend.forEach(function(c){
+    ph += '<div class="campo" data-c="'+esc(c.id)+'">'+
+      '<h3>'+esc(c.etiqueta)+'</h3>'+
+      '<div class="sub-foto"><span class="mini" id="mini_'+esc(c.id)+'"></span>'+
+      '<button class="b pri" data-foto="'+esc(c.id)+'">\ud83d\udce4 Subir la foto del estudio</button></div>'+
+      '<div class="ctrl" id="ctrl_'+esc(c.id)+'" hidden>'+
+        '<label>Subir / bajar</label><input type="range" min="0" max="100" value="50" data-pos="'+esc(c.id)+'">'+
+        '<label>Acercar</label><input type="range" min="100" max="220" value="100" data-zoom="'+esc(c.id)+'">'+
+        '<label>Girar (enderezar) · <span class="rotval" id="rotval_'+esc(c.id)+'">0\u00b0</span></label>'+
+        '<input type="range" min="-8" max="8" step="0.2" value="0" data-rot="'+esc(c.id)+'">'+
+        '<button class="b" style="margin-top:6px;font-size:12px;padding:5px 10px" data-rot0="'+esc(c.id)+'">\u21ba Enderezar a 0\u00b0</button>'+
+      '</div>'+
+      '<input type="file" accept="image/*" hidden id="file_'+esc(c.id)+'">'+
+    '</div>';
+  });
+  ph += '<button class="b ok gr" id="bTerminar">✓ Terminar y enviar</button>';
+  panel.innerHTML = ph;
+
+  // Conectar controles
+  pend.forEach(function(c){
+    $('[data-foto="'+c.id+'"]').onclick = function(){ document.getElementById('file_'+c.id).click(); };
+    document.getElementById('file_'+c.id).addEventListener('change', function(){
+      var f = this.files[0]; this.value=''; if(!f) return;
+      CEDULA.archivoAImagen(f, 1400, 0.9).then(function(r){
+        V[c.id] = { src:r.src, pos:50, zoom:1, rot:0 };
+        return CEDULA.cargarImagen(r.src);
+      }).then(function(){
+        document.getElementById('mini_'+c.id).style.backgroundImage = 'url('+V[c.id].src+')';
+        document.getElementById('ctrl_'+c.id).hidden = false;
+        dibujar();
+      }).catch(function(){ aviso('No se pudo abrir esa imagen'); });
+    });
+  });
+  wrap.querySelectorAll('[data-pos]').forEach(function(r){
+    r.addEventListener('input', function(){ var v=V[r.dataset.pos]; if(v){ v.pos=+r.value; dibujar(); } });
+  });
+  wrap.querySelectorAll('[data-zoom]').forEach(function(r){
+    r.addEventListener('input', function(){ var v=V[r.dataset.zoom]; if(v){ v.zoom=+r.value/100; dibujar(); } });
+  });
+  wrap.querySelectorAll('[data-rot]').forEach(function(r){
+    r.addEventListener('input', function(){
+      var v=V[r.dataset.rot]; if(v){ v.rot=+r.value;
+        var lbl=document.getElementById('rotval_'+r.dataset.rot);
+        if(lbl) lbl.textContent = (+r.value).toFixed(1)+'\u00b0';
+        dibujar();
+      }
+    });
+  });
+  wrap.querySelectorAll('[data-rot0]').forEach(function(b){
+    b.onclick = function(){
+      var id=b.dataset.rot0, v=V[id]; if(!v) return;
+      v.rot=0;
+      var sl=wrap.querySelector('[data-rot="'+id+'"]'); if(sl) sl.value=0;
+      var lbl=document.getElementById('rotval_'+id); if(lbl) lbl.textContent='0\u00b0';
+      dibujar();
+    };
+  });
+  $('#bTerminar').onclick = terminar;
+
+  dibujar();
+}
+
+function dibujar(){
+  CEDULA.precargar(plt, V).then(function(){
+    CEDULA.dibujar($('#lienzo'), plt, V, { escala: 1 });
+  });
+}
+
+function nombreTitular(){
+  var t = '';
+  (plt.campos||[]).some(function(c){
+    if ((c.tipo==='texto'||c.tipo==='parrafo') && /nombre/i.test(c.etiqueta||'') && V[c.id]){ t=String(V[c.id]).trim(); return true; }
+    return false;
+  });
+  return t || (meta.customer || 'SIN NOMBRE');
+}
+function metaTel(){ return meta.telefono || ''; }
+
+function terminar(){
+  // Verificar que todas las fotos de estudio ya tengan imagen
+  var faltan = fotosEstudio().filter(function(c){ return !(V[c.id] && V[c.id].src); });
+  if (faltan.length){ aviso('Falta subir: '+faltan.map(function(c){return c.etiqueta;}).join(', ')); return; }
+
+  wrap.innerHTML = '<div class="estado"><div class="rueda"></div><p>Generando la credencial y envi\u00e1ndola.<br>No cierres esta p\u00e1gina.</p></div>';
+
+  // Documentos a generar: la plantilla + gafete si se pidió
+  var docs = [plt];
+  var gafetePlt = null;
+  if (meta.gafete && E){
+    gafetePlt = (E.plantillas||[]).find(function(t){ return /gafete/i.test(t.nombre) && t.id !== plt.id; });
+    if (gafetePlt) docs.push(gafetePlt);
+  }
+  var fmt = D.formato || 'jpeg';
+
+  Promise.all(docs.map(function(d){ return CEDULA.precargar(d, V); })).then(function(){
+    var imagenes = docs.map(function(d){
+      var c = document.createElement('canvas');
+      CEDULA.dibujar(c, d, V, { escala: 1 });
+      var r = CEDULA.exportar(c, fmt, 0.95);
+      return { nombre:d.nombre, datos:r.base64, mime:r.mime, ext:r.ext, ancho:c.width, alto:c.height, ppp:r.ppp };
+    });
+
+    var carga = {
+      action:'credencial',
+      folio: folio,                      // MISMO folio: reusa la carpeta
+      customer: meta.customer || nombreTitular(),
+      telefono: meta.telefono || '',
+      escuela: (E.nombre||''), corto:(E.corto||E.nombre), codigo:(E.codigo||E.id),
+      documento: plt.nombre,
+      imagenes: imagenes,
+      cantidad: meta.cantidad || 1,
+      gafete: !!(meta.gafete && gafetePlt),
+      detalle: [{ tam:'Credencial · '+(E.corto||E.nombre), cant:(meta.cantidad||1), importe:0 }],
+      total: 0,
+      pendiente_estudio: false,          // YA no está pendiente → el Vigilante la mueve
+      enviado: new Date().toISOString()
+    };
+    return fetch(CRED_BACKEND, {
+      method:'POST', redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(carga)
+    }).then(function(r){ return r.json(); });
+  }).then(function(res){
+    if (res && res.ok===false) throw new Error(res.error||'error');
+    wrap.innerHTML = '<div class="estado"><h1>✓ Credencial terminada</h1>'+
+      '<p class="sub">Ya qued\u00f3 lista y se envi\u00f3. Puedes cerrar esta ventana y volver al Punto de Venta.</p></div>';
+  }).catch(function(){
+    wrap.innerHTML = '<div class="estado"><h1>No se pudo enviar</h1>'+
+      '<p class="sub">Revisa tu internet e int\u00e9ntalo de nuevo.</p>'+
+      '<button class="b pri" onclick="location.reload()">Reintentar</button></div>';
+  });
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+})();
+</script>
+</body>
+</html>
