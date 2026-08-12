@@ -1,0 +1,444 @@
+/* CEDU-LA · Motor compartido (datos + dibujo + salida a 300 ppp sRGB). */
+(function (global) {
+  'use strict';
+
+  var LLAVE = 'cedula_datos_v1';
+  var PPP = 300;                 // resolución fija de salida
+  var ICC_SRGB_B64 = 'AAACTGxjbXMEQAAAbW50clJHQiBYWVogB+oACAAKAAAAAAAPYWNzcEFQUEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALZGVzYwAAAQgAAAA2Y3BydAAAAUAAAABMd3RwdAAAAYwAAAAUY2hhZAAAAaAAAAAsclhZWgAAAcwAAAAUYlhZWgAAAeAAAAAUZ1hZWgAAAfQAAAAUclRSQwAAAggAAAAgZ1RSQwAAAggAAAAgYlRSQwAAAggAAAAgY2hybQAAAigAAAAkbWx1YwAAAAAAAAABAAAADGVuVVMAAAAaAAAAHABzAFIARwBCACAAYgB1AGkAbAB0AC0AaQBuAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAADAAAAAcAE4AbwAgAGMAbwBwAHkAcgBpAGcAaAB0ACwAIAB1AHMAZQAgAGYAcgBlAGUAbAB5WFlaIAAAAAAAAPbWAAEAAAAA0y1zZjMyAAAAAAABDEIAAAXe///zJQAAB5MAAP2Q///7of///aIAAAPcAADAblhZWiAAAAAAAABvoAAAOPUAAAOQWFlaIAAAAAAAACSfAAAPhAAAtsNYWVogAAAAAAAAYpcAALeHAAAY2XBhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbY2hybQAAAAAAAwAAAACj1wAAVHsAAEzNAACZmgAAJmYAAA9c';  // perfil sRGB IEC61966-2.1 (compacto)
+
+  /* ---------- almacenamiento (con respaldo en memoria) ---------- */
+  var memoria = null;
+  function leerLocal() {
+    try { var s = localStorage.getItem(LLAVE); return s ? JSON.parse(s) : null; }
+    catch (e) { return memoria; }
+  }
+  function escribirLocal(d) {
+    try { localStorage.setItem(LLAVE, JSON.stringify(d)); return true; }
+    catch (e) { return false; }
+  }
+
+  function clonar(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // Carga: fusiona las ediciones (localStorage, SIN imágenes) con el archivo (imágenes + escuelas nuevas)
+  function cargarDatos() {
+    var light = leerLocal();
+    var base = global.PLANTILLAS_BASE ? clonar(global.PLANTILLAS_BASE) : { version: 2, servidor: '', escuelas: [] };
+    if (memoria && memoria.escuelas && memoria.escuelas.length) return memoria;   // misma sesión: con imágenes
+    if (!light || !light.escuelas || !light.escuelas.length) return base;
+
+    var baseById = {}; base.escuelas.forEach(function (e) { baseById[e.id] = e; });
+    var out = { version: light.version || base.version, servidor: light.servidor || base.servidor, escuelas: [] };
+
+    // Escuelas editadas (localStorage), rellenando las imágenes desde el archivo
+    var lightIds = {};
+    light.escuelas.forEach(function (e) {
+      lightIds[e.id] = true;
+      var be = baseById[e.id];
+      var plts = (e.plantillas || []).map(function (p) {
+        var q = {}; for (var k in p) q[k] = p[k];
+        if (!q.imagen && be) {
+          var bp = (be.plantillas || []).filter(function (x) { return x.id === p.id; })[0];
+          if (bp) q.imagen = bp.imagen;
+        }
+        return q;
+      });
+      var e2 = {}; for (var k2 in e) if (k2 !== 'plantillas') e2[k2] = e[k2];
+      e2.plantillas = plts;
+      out.escuelas.push(e2);
+    });
+    // Escuelas NUEVAS que están en el archivo pero aún no en localStorage
+    base.escuelas.forEach(function (e) { if (!lightIds[e.id]) out.escuelas.push(e); });
+    return out;
+  }
+
+  // Guardar SIN imágenes (pesan mucho). Las imágenes viven en el archivo credenciales-plantillas.js.
+  function guardarDatos(d) {
+    memoria = d;
+    var light = {
+      version: d.version, servidor: d.servidor,
+      escuelas: (d.escuelas || []).map(function (e) {
+        var e2 = {}; for (var k in e) if (k !== 'plantillas') e2[k] = e[k];
+        e2.plantillas = (e.plantillas || []).map(function (p) {
+          var p2 = {}; for (var k2 in p) if (k2 !== 'imagen') p2[k2] = p[k2];
+          return p2;
+        });
+        return e2;
+      })
+    };
+    return escribirLocal(light);
+  }
+  function borrarLocal() { try { localStorage.removeItem(LLAVE); } catch (e) {} memoria = null; }
+
+  function uid(pre) { return (pre || 'id') + '_' + Math.random().toString(36).slice(2, 8); }
+
+  /* ---------- imágenes ---------- */
+  var cache = {};
+  function cargarImagen(src) {
+    if (cache[src]) return Promise.resolve(cache[src]);
+    return new Promise(function (ok, mal) {
+      var im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = function () { cache[src] = im; ok(im); };
+      im.onerror = function () { mal(new Error('No se pudo cargar la imagen')); };
+      im.src = src;
+    });
+  }
+
+  // PLANTILLAS: se leen tal cual, sin recomprimir ni redimensionar.
+  function leerPlantilla(file) {
+    return new Promise(function (ok, mal) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        var im = new Image();
+        im.onload = function () {
+          cache[fr.result] = im;
+          ok({ src: fr.result, w: im.naturalWidth, h: im.naturalHeight, peso: file.size, tipo: file.type });
+        };
+        im.onerror = function () { mal(new Error('Archivo de imagen inválido')); };
+        im.src = fr.result;
+      };
+      fr.onerror = function () { mal(new Error('No se pudo leer el archivo')); };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  // FOTOS del cliente: sí se ajustan, para que el envío no pese de más.
+  function archivoAImagen(file, maxLado, calidad) {
+    maxLado = maxLado || 1600; calidad = calidad || 0.9;
+    return new Promise(function (ok, mal) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        var im = new Image();
+        im.onload = function () {
+          var w = im.width, h = im.height, e = Math.min(1, maxLado / Math.max(w, h));
+          if (e === 1) return ok({ src: fr.result, w: w, h: h });
+          var c = document.createElement('canvas');
+          c.width = Math.round(w * e); c.height = Math.round(h * e);
+          var x = c.getContext('2d');
+          x.imageSmoothingQuality = 'high';
+          x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+          x.drawImage(im, 0, 0, c.width, c.height);
+          ok({ src: c.toDataURL('image/jpeg', calidad), w: c.width, h: c.height });
+        };
+        im.onerror = function () { mal(new Error('Archivo de imagen inválido')); };
+        im.src = fr.result;
+      };
+      fr.onerror = function () { mal(new Error('No se pudo leer el archivo')); };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- texto ---------- */
+  function encogerLinea(ctx, texto, ancho, px, fuente, peso) {
+    var t = px;
+    for (var i = 0; i < 40; i++) {
+      ctx.font = peso + ' ' + t + 'px ' + fuente;
+      if (ctx.measureText(texto).width <= ancho || t <= px * 0.45) break;
+      t = t * 0.94;
+    }
+    return t;
+  }
+
+  function envolver(ctx, texto, ancho) {
+    var palabras = String(texto).split(/\s+/), lineas = [], actual = '';
+    for (var i = 0; i < palabras.length; i++) {
+      var palabra = palabras[i];
+      // Si una sola palabra no cabe en el ancho, se parte por letras
+      if (ctx.measureText(palabra).width > ancho && palabra.length > 1) {
+        if (actual) { lineas.push(actual); actual = ''; }
+        var trozo = '';
+        for (var k = 0; k < palabra.length; k++) {
+          var pr = trozo + palabra[k];
+          if (ctx.measureText(pr).width > ancho && trozo) { lineas.push(trozo); trozo = palabra[k]; }
+          else trozo = pr;
+        }
+        actual = trozo;
+        continue;
+      }
+      var prueba = actual ? actual + ' ' + palabra : palabra;
+      if (ctx.measureText(prueba).width > ancho && actual) { lineas.push(actual); actual = palabra; }
+      else actual = prueba;
+    }
+    if (actual) lineas.push(actual);
+    return lineas;
+  }
+
+  // Ajusta el texto a la caja: envuelve y achica hasta que SIEMPRE quepa (ancho y alto).
+  function ajustarTexto(ctx, texto, w, h, px, fuente, peso) {
+    var t = px, lineas = [texto];
+    for (var i = 0; i < 80; i++) {
+      ctx.font = peso + ' ' + t + 'px ' + fuente;
+      lineas = envolver(ctx, texto, w);
+      var altoTotal = lineas.length * t * 1.18;
+      var cabeAncho = true;
+      for (var k = 0; k < lineas.length; k++) {
+        if (ctx.measureText(lineas[k]).width > w) { cabeAncho = false; break; }
+      }
+      if ((altoTotal <= h && cabeAncho) || t <= 6) break;
+      t = t * 0.94;
+    }
+    return { t: t, lineas: lineas };
+  }
+
+  /* ---------- dibujo de un campo ---------- */
+  function dibujarCampo(ctx, campo, valor, W, H) {
+    if (campo.tipo === 'corte') return;
+    var x = campo.x / 100 * W, y = campo.y / 100 * H;
+    var w = campo.w / 100 * W, h = campo.h / 100 * H;
+
+    if (campo.tipo === 'foto' || campo.tipo === 'firma') {
+      if (!valor || !valor.src) return;
+      var im = cache[valor.src];
+      if (!im) return;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+      if (campo.tipo === 'firma') {
+        var e = Math.min(w / im.width, h / im.height);
+        var dw = im.width * e, dh = im.height * e;
+        ctx.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+      } else {
+        var z = valor.zoom || 1;
+        var ang = (valor.rot || 0) * Math.PI / 180;        // giro en radianes
+        // Factor extra para que la foto siga cubriendo el recuadro aunque esté girada
+        var ca = Math.abs(Math.cos(ang)), sa = Math.abs(Math.sin(ang));
+        var Wp = w * ca + h * sa, Hp = w * sa + h * ca;
+        var rc = Math.max(Wp / w, Hp / h);
+        var ec = Math.max(w / im.width, h / im.height) * z * rc;
+        var dw2 = im.width * ec, dh2 = im.height * ec;
+        var pos = (valor.pos == null ? 50 : valor.pos) / 100;
+        var posx = (valor.posx == null ? 50 : valor.posx) / 100;
+        var panx = (dw2 - w) * (0.5 - posx);
+        var pany = (dh2 - h) * (0.5 - pos);
+        // Girar alrededor del centro del recuadro
+        ctx.translate(x + w / 2, y + h / 2);
+        if (ang) ctx.rotate(ang);
+        ctx.drawImage(im, -dw2 / 2 + panx, -dh2 / 2 + pany, dw2, dh2);
+      }
+      ctx.restore();
+      return;
+    }
+
+    var texto = (valor == null ? '' : String(valor)).trim();
+    if (!texto) return;
+    if (campo.mayus) texto = texto.toUpperCase();
+
+    var px = campo.tam / 100 * H;
+    var peso = campo.peso === 700 ? '700' : '400';
+    var fuente = campo.fuente || 'Arial';
+    ctx.save();
+    ctx.fillStyle = campo.color || '#111111';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = campo.align || 'left';
+    var ax = campo.align === 'center' ? x + w / 2 : (campo.align === 'right' ? x + w : x);
+
+    // TEXTO y PÁRRAFO: ambos se ajustan a la caja (envuelven y se achican, nunca se salen)
+    var r = ajustarTexto(ctx, texto, w, h, px, fuente, peso);
+    var t = r.t, lineas = r.lineas;
+    ctx.font = peso + ' ' + t + 'px ' + fuente;
+    var alto = lineas.length * t * 1.18;
+    var y0 = y + (h - alto) / 2 + t * 0.59;
+    for (var j = 0; j < lineas.length; j++) ctx.fillText(lineas[j], ax, y0 + j * t * 1.18);
+    ctx.restore();
+  }
+
+  /* ---------- dibujo completo ----------
+     La plantilla se dibuja 1:1: un píxel del archivo original es un píxel de salida.
+     opts: {recorte:{x,y,w,h} en %, escala (solo para vista previa en pantalla)}          */
+  function dibujar(canvas, plantilla, valores, opts) {
+    opts = opts || {};
+    var W = plantilla.w, H = plantilla.h;
+    var r = opts.recorte;
+    var anchoSalida = r ? r.w / 100 * W : W;
+    var altoSalida = r ? r.h / 100 * H : H;
+    var esc = opts.escala || 1;
+
+    canvas.width = Math.round(anchoSalida * esc);
+    canvas.height = Math.round(altoSalida * esc);
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(esc, 0, 0, esc, 0, 0);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, anchoSalida, altoSalida);
+    if (r) ctx.translate(-r.x / 100 * W, -r.y / 100 * H);
+
+    var fondo = cache[plantilla.imagen];
+    if (fondo) ctx.drawImage(fondo, 0, 0, W, H);
+
+    (plantilla.campos || []).forEach(function (c) {
+      dibujarCampo(ctx, c, valores ? valores[c.id] : null, W, H);
+    });
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    return canvas;
+  }
+
+  function precargar(plantilla, valores) {
+    var lista = [plantilla.imagen];
+    (plantilla.campos || []).forEach(function (c) {
+      var v = valores ? valores[c.id] : null;
+      if (v && v.src) lista.push(v.src);
+    });
+    return Promise.all(lista.map(function (s) {
+      return cargarImagen(s).catch(function () { return null; });
+    }));
+  }
+
+  /* =================================================================
+     SALIDA: 300 ppp + perfil sRGB incrustado
+     El canvas no guarda resolución ni perfil de color, así que los
+     marcadores se escriben a mano sobre los bytes del archivo.
+     ================================================================= */
+
+  function b64aBytes(b64) {
+    var bin = atob(b64), a = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    return a;
+  }
+  function bytesAB64(a) {
+    var s = '', trozo = 0x8000;
+    for (var i = 0; i < a.length; i += trozo) {
+      s += String.fromCharCode.apply(null, a.subarray(i, i + trozo));
+    }
+    return btoa(s);
+  }
+  function unir(partes) {
+    var n = 0, i;
+    for (i = 0; i < partes.length; i++) n += partes[i].length;
+    var out = new Uint8Array(n), o = 0;
+    for (i = 0; i < partes.length; i++) { out.set(partes[i], o); o += partes[i].length; }
+    return out;
+  }
+
+  var ICC = null;
+  function icc() { if (!ICC) ICC = b64aBytes(ICC_SRGB_B64); return ICC; }
+
+  /* --- JPEG: densidad en APP0 (JFIF) + perfil en APP2 (ICC_PROFILE) --- */
+  function marcarJPEG(b) {
+    if (b[0] !== 0xFF || b[1] !== 0xD8) return b;
+
+    var pos = 2, finApp0 = 2, tieneApp0 = false;
+    if (b[pos] === 0xFF && b[pos + 1] === 0xE0) {
+      var largo = (b[pos + 2] << 8) | b[pos + 3];
+      tieneApp0 = true;
+      finApp0 = pos + 2 + largo;
+      b[pos + 11] = 1;                    // unidades: pulgadas
+      b[pos + 12] = (PPP >> 8) & 0xFF;    // densidad horizontal
+      b[pos + 13] = PPP & 0xFF;
+      b[pos + 14] = (PPP >> 8) & 0xFF;    // densidad vertical
+      b[pos + 15] = PPP & 0xFF;
+    }
+
+    var partes = [];
+    partes.push(b.subarray(0, 2));
+    if (!tieneApp0) {
+      partes.push(new Uint8Array([
+        0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x01,
+        (PPP >> 8) & 0xFF, PPP & 0xFF, (PPP >> 8) & 0xFF, PPP & 0xFF, 0x00, 0x00
+      ]));
+    } else {
+      partes.push(b.subarray(2, finApp0));
+    }
+
+    var p = icc();
+    var largoSeg = 2 + 12 + 2 + p.length;
+    var cab = new Uint8Array(4 + 12 + 2);
+    cab[0] = 0xFF; cab[1] = 0xE2;
+    cab[2] = (largoSeg >> 8) & 0xFF; cab[3] = largoSeg & 0xFF;
+    var id = 'ICC_PROFILE\0';
+    for (var i = 0; i < 12; i++) cab[4 + i] = id.charCodeAt(i);
+    cab[16] = 1; cab[17] = 1;             // segmento 1 de 1
+    partes.push(cab, p, b.subarray(finApp0));
+    return unir(partes);
+  }
+
+  /* --- PNG: chunks pHYs (resolución) y sRGB (espacio de color) --- */
+  var TABLA = null;
+  function crc32(datos) {
+    if (!TABLA) {
+      TABLA = new Uint32Array(256);
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        TABLA[n] = c >>> 0;
+      }
+    }
+    var r = 0xFFFFFFFF;
+    for (var i = 0; i < datos.length; i++) r = TABLA[(r ^ datos[i]) & 0xFF] ^ (r >>> 8);
+    return (r ^ 0xFFFFFFFF) >>> 0;
+  }
+  function chunk(tipo, datos) {
+    var cuerpo = new Uint8Array(4 + datos.length);
+    for (var i = 0; i < 4; i++) cuerpo[i] = tipo.charCodeAt(i);
+    cuerpo.set(datos, 4);
+    var c = crc32(cuerpo);
+    var out = new Uint8Array(8 + datos.length + 4), v = new DataView(out.buffer);
+    v.setUint32(0, datos.length);
+    out.set(cuerpo, 4);
+    v.setUint32(8 + datos.length, c);
+    return out;
+  }
+  function marcarPNG(b) {
+    var finIHDR = 8 + 25;                 // firma + IHDR completo
+    var ppm = Math.round(PPP / 0.0254);   // píxeles por metro
+    var d = new Uint8Array(9), v = new DataView(d.buffer);
+    v.setUint32(0, ppm); v.setUint32(4, ppm); d[8] = 1;
+    return unir([
+      b.subarray(0, finIHDR),
+      chunk('pHYs', d),
+      chunk('sRGB', new Uint8Array([0])), // intento perceptual
+      b.subarray(finIHDR)
+    ]);
+  }
+
+  /**
+   * Convierte el canvas en archivo listo para imprenta.
+   * formato: 'jpeg' (predeterminado) o 'png' (sin pérdida, mucho más pesado).
+   * Devuelve { base64, mime, ext, bytes, ppp }.
+   */
+  function exportar(canvas, formato, calidad) {
+    formato = (formato === 'png') ? 'png' : 'jpeg';
+    var mime = formato === 'png' ? 'image/png' : 'image/jpeg';
+    var url = canvas.toDataURL(mime, formato === 'png' ? undefined : (calidad || 0.95));
+    var b = b64aBytes(url.split(',')[1]);
+    b = formato === 'png' ? marcarPNG(b) : marcarJPEG(b);
+    return { base64: bytesAB64(b), mime: mime, ext: formato === 'png' ? 'png' : 'jpg', bytes: b, ppp: PPP };
+  }
+
+  /* ---------- exportar / descargar ---------- */
+  function descargar(nombre, url) {
+    var a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); }, 300);
+  }
+
+  function exportarJS(datos) {
+    var js = '/* CEDU-LA \u00b7 Base de plantillas generada el ' + new Date().toLocaleString('es-MX') + ' */\n' +
+      'window.PLANTILLAS_BASE = ' + JSON.stringify(datos) + ';\n';
+    var blob = new Blob([js], { type: 'text/javascript;charset=utf-8' });
+    descargar('credenciales-plantillas.js', URL.createObjectURL(blob));
+  }
+
+  function limpiarNombre(s) {
+    return String(s || 'credencial').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').toUpperCase().slice(0, 40) || 'CREDENCIAL';
+  }
+
+  // Medidas físicas de una plantilla a 300 ppp
+  function medidas(w, h) {
+    return {
+      pulg: [w / PPP, h / PPP],
+      cm: [w / PPP * 2.54, h / PPP * 2.54],
+      texto: (w / PPP * 2.54).toFixed(1) + ' × ' + (h / PPP * 2.54).toFixed(1) + ' cm'
+    };
+  }
+
+  global.CEDULA = {
+    PPP: PPP,
+    cargarDatos: cargarDatos, guardarDatos: guardarDatos, borrarLocal: borrarLocal,
+    clonar: clonar, uid: uid, cargarImagen: cargarImagen,
+    leerPlantilla: leerPlantilla, archivoAImagen: archivoAImagen,
+    dibujar: dibujar, precargar: precargar, exportar: exportar,
+    descargar: descargar, exportarJS: exportarJS,
+    limpiarNombre: limpiarNombre, medidas: medidas, cache: cache
+  };
+})(window);
