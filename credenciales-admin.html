@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CEDU-LA · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tinta:#241d16; --papel:#f6efe5; --acento:#c5572a;
+  --linea:#d9cdba; --linea2:#c2b39c; --verde:#3f6b4f; --alerta:#a83232;
+  --azul:#2f5d7c; --morado:#6b4a86;
+  --r:4px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--papel); color:var(--tinta);
+  font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:14px;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+
+/* ---------- barra superior ---------- */
+header{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:10px 16px;background:var(--tinta);color:var(--papel);
+  border-bottom:3px solid var(--acento);
+}
+.marca{font-family:Archivo,sans-serif;font-weight:800;letter-spacing:.14em;font-size:17px}
+.marca small{display:block;font-size:9.5px;letter-spacing:.3em;opacity:.6;font-weight:500}
+.hbtns{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.b{
+  border:1px solid var(--linea2);background:transparent;color:inherit;
+  padding:7px 13px;border-radius:var(--r);font-size:12px;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;transition:.12s;
+}
+.b:hover{background:rgba(255,255,255,.12)}
+.b.pri{background:var(--acento);border-color:var(--acento);color:#fff}
+.b.pri:hover{background:#a8461f}
+.b.chico{padding:5px 9px;font-size:11px}
+.b:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+/* ---------- cuerpo ---------- */
+main{flex:1;display:grid;grid-template-columns:250px 1fr 288px;min-height:0}
+aside{background:#efe6d9;border-right:1px solid var(--linea);overflow-y:auto;padding:14px}
+aside.der{border-right:0;border-left:1px solid var(--linea)}
+.rot{
+  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.22em;
+  text-transform:uppercase;color:#8a7a66;margin:0 0 8px;display:flex;
+  align-items:center;gap:8px;
+}
+.rot::after{content:"";flex:1;height:1px;background:var(--linea2)}
+.rot+.rot,.bloque+.rot{margin-top:20px}
+
+.esc{margin-bottom:10px;border:1px solid var(--linea2);border-radius:var(--r);background:#f6efe5;overflow:hidden}
+.esc>h4{
+  margin:0;padding:9px 10px;font-family:Archivo,sans-serif;font-size:12px;
+  letter-spacing:.04em;display:flex;align-items:center;gap:7px;cursor:pointer;
+}
+.esc>h4 .pt{width:9px;height:9px;border-radius:50%;flex:none}
+.esc>h4>span:nth-child(2){flex:1}
+.esc>h4 .ed{margin-left:0;font-size:11px;opacity:.5;background:none;border:0;padding:2px 4px}
+.esc>h4 .ed:hover{opacity:1;color:var(--acento)}
+.plt{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--linea);
+  background:transparent;padding:8px 10px 8px 26px;font-size:12.5px}
+.plt:hover{background:#eee2d0}
+.plt.on{background:var(--tinta);color:var(--papel);font-weight:600}
+.plt .n{opacity:.55;font-size:10.5px;font-family:"IBM Plex Mono",monospace;float:right}
+
+/* lista de campos */
+.cmp{
+  display:flex;align-items:center;gap:7px;width:100%;text-align:left;
+  border:1px solid transparent;border-radius:var(--r);background:transparent;
+  padding:6px 7px;font-size:12.5px;margin-bottom:1px;
+}
+.cmp{cursor:pointer}
+.cmp:hover{background:#eee2d0}
+.cmp:focus-visible{outline:2px solid var(--acento);outline-offset:1px}
+.cmp .mv{border:0;background:transparent;opacity:.45;padding:2px 4px;font-size:12px;line-height:1;border-radius:3px}
+.cmp .mv:hover{opacity:1;color:var(--acento);background:#e2d6c4}
+.cmp.on{background:#fff;border-color:var(--acento)}
+.cmp .tp{
+  width:16px;height:16px;border-radius:3px;flex:none;font-size:9px;color:#fff;
+  display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-weight:600;
+}
+.cmp .nom{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-texto{background:var(--tinta)} .t-parrafo{background:#5a4a38}
+.t-foto{background:var(--azul)} .t-firma{background:var(--morado)} .t-corte{background:var(--verde)}
+
+/* ---------- lienzo ---------- */
+section.centro{display:flex;flex-direction:column;min-width:0;background:#e6dcce}
+.barra{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:8px 14px;border-bottom:1px solid var(--linea);background:#efe6d9;
+}
+.barra .tit{font-family:Archivo,sans-serif;font-weight:700;font-size:13px;letter-spacing:.05em}
+.barra .sep{width:1px;height:20px;background:var(--linea2)}
+.barra .med{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;color:#8a7a66}
+.barra .med.baja{color:var(--alerta);font-weight:600}
+.b.oscuro{border-color:var(--linea2);color:var(--tinta)}
+.b.oscuro:hover{background:#e2d6c4}
+.b.oscuro.on{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.zona{flex:1;overflow:auto;padding:22px;display:grid;place-items:start center}
+.marco{position:relative;max-width:1100px;width:100%;box-shadow:0 6px 26px rgba(36,29,22,.22);background:#fff}
+.marco canvas{display:block;width:100%;height:auto}
+.caja{position:absolute;border:1.5px dashed rgba(36,29,22,.55);cursor:move;touch-action:none}
+.caja::after{
+  content:attr(data-n);position:absolute;left:0;bottom:100%;
+  font-size:9.5px;font-family:"IBM Plex Mono",monospace;background:var(--tinta);color:var(--papel);
+  padding:1px 4px;white-space:nowrap;border-radius:2px 2px 0 0;opacity:.85;
+}
+.caja.on{border:2px solid var(--acento);background:rgba(197,87,42,.10);z-index:5}
+.caja.on::after{background:var(--acento);opacity:1}
+.caja.tipo-foto{border-color:var(--azul)} .caja.tipo-firma{border-color:var(--morado)}
+.caja.tipo-corte{border-style:solid;border-color:var(--verde);background:rgba(63,107,79,.05)}
+.caja .as{
+  position:absolute;right:-6px;bottom:-6px;width:13px;height:13px;background:#fff;
+  border:2px solid var(--acento);border-radius:2px;cursor:nwse-resize;
+}
+.marco.limpio .caja{display:none}
+
+/* ---------- panel propiedades ---------- */
+.campo{margin-bottom:11px}
+.campo label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8a7a66;margin-bottom:3px}
+.campo input[type=text],.campo input[type=number],.campo select,.campo textarea{
+  width:100%;padding:6px 8px;border:1px solid var(--linea2);border-radius:var(--r);
+  background:#fff;font-size:13px;
+}
+.campo textarea{resize:vertical;min-height:52px}
+.fila{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fila3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.seg{display:flex;border:1px solid var(--linea2);border-radius:var(--r);overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:6px 0;font-size:12px}
+.seg button.on{background:var(--tinta);color:var(--papel)}
+.chk{display:flex;align-items:center;gap:7px;font-size:13px;margin-bottom:8px}
+.vacio{color:#8a7a66;font-size:12.5px;line-height:1.6;padding:8px 0}
+.bloque{background:#f6efe5;border:1px solid var(--linea);border-radius:var(--r);padding:10px;margin-bottom:12px}
+
+/* ---------- modal ---------- */
+.velo{position:fixed;inset:0;background:rgba(36,29,22,.62);display:none;place-items:center;padding:20px;z-index:60}
+.velo.on{display:grid}
+.modal{background:var(--papel);border-radius:6px;max-width:460px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:88vh;overflow:auto}
+.modal h3{font-family:Archivo,sans-serif;margin:0 0 14px;font-size:17px;letter-spacing:.03em}
+.modal .pie{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.b.oscuro.pri{background:var(--acento);color:#fff;border-color:var(--acento)}
+.aviso{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);
+  background:var(--tinta);color:var(--papel);padding:10px 18px;border-radius:22px;font-size:13px;
+  opacity:0;pointer-events:none;transition:.25s;z-index:80}
+.aviso.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.aviso.mal{background:var(--alerta)}
+
+@media(max-width:1000px){
+  main{grid-template-columns:1fr;overflow-y:auto}
+  aside{border:0;border-bottom:1px solid var(--linea);max-height:none}
+  section.centro{order:-1}
+  .zona{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">CEDU-LA<small>ADMIN · PLANTILLAS</small></div>
+  <div class="hbtns">
+    <button class="b" id="bServidor">Conexión</button>
+    <button class="b" id="bImportar">Importar</button>
+    <button class="b" id="bRestaurar">Restaurar base</button>
+    <button class="b" id="bExportar">Exportar credenciales-plantillas.js</button>
+    <button class="b pri" id="bGuardar">Guardar</button>
+  </div>
+</header>
+
+<main>
+  <!-- IZQUIERDA -->
+  <aside>
+    <p class="rot">Escuelas</p>
+    <div id="listaEsc"></div>
+    <button class="b oscuro" id="bNuevaEsc" style="width:100%">+ Nueva escuela</button>
+
+    <p class="rot">Campos de la plantilla</p>
+    <div id="listaCampos"></div>
+    <div class="fila" style="margin-top:8px">
+      <button class="b oscuro chico" data-nuevo="texto">+ Texto</button>
+      <button class="b oscuro chico" data-nuevo="parrafo">+ Párrafo</button>
+      <button class="b oscuro chico" data-nuevo="lista">+ Lista</button>
+      <button class="b oscuro chico" data-nuevo="horario">+ Horario</button>
+      <button class="b oscuro chico" data-nuevo="foto">+ Foto</button>
+      <button class="b oscuro chico" data-nuevo="firma">+ Firma</button>
+    </div>
+    <button class="b oscuro chico" data-nuevo="corte" style="width:100%;margin-top:6px">+ Zona de corte</button>
+  </aside>
+
+  <!-- CENTRO -->
+  <section class="centro">
+    <div class="barra">
+      <span class="tit" id="tituloPlt">Sin plantilla</span>
+      <span class="med" id="medidas"></span>
+      <span class="sep"></span>
+      <button class="b oscuro chico on" id="bGuias">Ver guías</button>
+      <button class="b oscuro chico" id="bMuestra">Datos de ejemplo</button>
+      <span class="sep"></span>
+      <button class="b oscuro chico" id="bNuevaPlt">+ Plantilla</button>
+      <button class="b oscuro chico" id="bFondo">🖼 Cambiar fondo</button>
+      <button class="b oscuro chico" id="bDupPlt">Duplicar</button>
+      <button class="b oscuro chico" id="bDelPlt">Eliminar</button>
+    </div>
+    <div class="zona">
+      <div class="marco" id="marco">
+        <canvas id="lienzo" width="1800" height="1200"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- DERECHA -->
+  <aside class="der">
+    <p class="rot">Propiedades</p>
+    <div id="props"><p class="vacio">Selecciona un campo en el lienzo o en la lista para editar su posición, tamaño y estilo.</p></div>
+  </aside>
+</main>
+
+<div class="velo" id="velo"><div class="modal" id="modal"></div></div>
+<div class="aviso" id="aviso"></div>
+<input type="file" id="fileImg" accept="image/*" hidden>
+<input type="file" id="fileFondo" accept="image/*" hidden>
+<input type="file" id="fileJs" accept=".js,.json,text/javascript,application/json" hidden>
+
+<script src="credenciales-motor.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// El archivo credenciales-plantillas.js de GitHub es la ÚNICA fuente de verdad.
+// Se pide siempre fresco (sin caché) antes de arrancar el editor.
+CEDULA.cargarArchivo().then(function(){ arrancarAdmin(); });
+
+function arrancarAdmin(){
+'use strict';
+var D = CEDULA.cargarDatos();
+var escSel = D.escuelas[0] ? D.escuelas[0].id : null;
+var pltSel = D.escuelas[0] && D.escuelas[0].plantillas[0] ? D.escuelas[0].plantillas[0].id : null;
+var campoSel = null, verGuias = true, verMuestra = true;
+
+var $ = function(s){ return document.querySelector(s); };
+var marco = $('#marco'), lienzo = $('#lienzo');
+
+function avisar(t, mal){
+  var a = $('#aviso'); a.textContent = t; a.className = 'aviso on' + (mal ? ' mal' : '');
+  clearTimeout(a._t); a._t = setTimeout(function(){ a.className = 'aviso'; }, 2600);
+}
+function normaliza(s){
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+}
+function ligaDe(e){
+  var base = (D.ligaBase || '').trim();
+  if (!base){
+    base = location.href.replace(/[^/]*$/, '') + 'cliente.html';
+  }
+  return base + '?c=' + encodeURIComponent(normaliza(e.codigo || e.corto || e.id));
+}
+function copiarLiga(e){
+  var liga = ligaDe(e);
+  var ok = function(){ avisar('Liga copiada: ' + liga); };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(liga).then(ok, function(){ prompt('Copia la liga:', liga); });
+  } else prompt('Copia la liga:', liga);
+}
+function escuela(){ return D.escuelas.find(function(e){ return e.id === escSel; }); }
+function plantilla(){ var e = escuela(); return e ? e.plantillas.find(function(p){ return p.id === pltSel; }) : null; }
+function campo(){ var p = plantilla(); return p ? p.campos.find(function(c){ return c.id === campoSel; }) : null; }
+
+/* ============ MUESTRAS ============ */
+var MUESTRAS = {
+  nombre:'ANA SOFÍA RAMÍREZ LÓPEZ', sala:'LACTANTES B', horario:'8:00 A 15:00 HRS',
+  ciclo:'2025 - 2026', madre:'MARÍA GUADALUPE LÓPEZ DÍAZ', padre:'JUAN CARLOS RAMÍREZ SOTO',
+  autorizada:'ROSA MARÍA LÓPEZ DÍAZ', adscripcion:'ESC. PRIM. BENITO JUÁREZ',
+  dom_trabajo:'AV. VICENTE GUERRERO 210, COL. CENTRO, IGUALA, GRO.',
+  dom_padre:'CALLE MATAMOROS 39, COL. CENTRO, IGUALA, GRO.',
+  dom_auto:'CALLE ALDAMA 14, COL. 24 DE FEBRERO, IGUALA, GRO.',
+  tel_madre:'733 123 4567', tel_padre:'733 765 4321', tel_auto:'733 987 6543'
+};
+function muestraDe(c){
+  if (c.muestra) return c.muestra;
+  if (MUESTRAS[c.id]) return MUESTRAS[c.id];
+  if (c.tipo === 'parrafo') return 'CALLE EJEMPLO 123, COL. CENTRO, IGUALA, GRO.';
+  if (c.tipo === 'lista') return (c.opciones && c.opciones[0]) ? c.opciones[0] : 'OPCIÓN 1';
+  if (c.tipo === 'horario') return '8:00 a 14:00';
+  return (c.etiqueta || 'EJEMPLO');
+}
+function valoresMuestra(p){
+  var v = {};
+  if (!verMuestra) return v;
+  p.campos.forEach(function(c){
+    if (c.fijo){ v[c.id] = (c.valorFijo || muestraDe(c)); return; }
+    if (c.tipo === 'texto' || c.tipo === 'parrafo' || c.tipo === 'lista' || c.tipo === 'horario') v[c.id] = muestraDe(c);
+  });
+  return v;
+}
+
+/* ============ RENDER ============ */
+var pendiente = false;
+function pintar(){
+  if (pendiente) return; pendiente = true;
+  requestAnimationFrame(function(){
+    pendiente = false;
+    var p = plantilla();
+    if (!p){ lienzo.width = 900; lienzo.height = 600; marco.querySelectorAll('.caja').forEach(function(x){x.remove();}); return; }
+    CEDULA.precargar(p, {}).then(function(){
+      CEDULA.dibujar(lienzo, p, valoresMuestra(p), {escala:1});
+      cajas();
+    });
+  });
+}
+
+function cajas(){
+  var p = plantilla();
+  marco.querySelectorAll('.caja').forEach(function(x){ x.remove(); });
+  marco.classList.toggle('limpio', !verGuias);
+  if (!p) return;
+  p.campos.forEach(function(c){
+    var d = document.createElement('div');
+    d.className = 'caja tipo-' + c.tipo + (c.id === campoSel ? ' on' : '');
+    d.dataset.id = c.id; d.dataset.n = c.etiqueta || c.id;
+    d.style.cssText = 'left:'+c.x+'%;top:'+c.y+'%;width:'+c.w+'%;height:'+c.h+'%';
+    var h = document.createElement('div'); h.className = 'as'; d.appendChild(h);
+    marco.appendChild(d);
+  });
+}
+
+/* ============ ARRASTRE ============ */
+var arr = null;
+marco.addEventListener('pointerdown', function(ev){
+  var caja = ev.target.closest('.caja'); if (!caja) return;
+  var p = plantilla(); if (!p) return;
+  var c = p.campos.find(function(k){ return k.id === caja.dataset.id; }); if (!c) return;
+  campoSel = c.id; panel(); cajas();
+  var r = marco.getBoundingClientRect();
+  arr = {
+    c: c, modo: ev.target.classList.contains('as') ? 'tam' : 'mov',
+    px: ev.clientX, py: ev.clientY, x: c.x, y: c.y, w: c.w, h: c.h, rw: r.width, rh: r.height
+  };
+  ev.target.setPointerCapture(ev.pointerId);
+  ev.preventDefault();
+});
+window.addEventListener('pointermove', function(ev){
+  if (!arr) return;
+  var dx = (ev.clientX - arr.px) / arr.rw * 100, dy = (ev.clientY - arr.py) / arr.rh * 100;
+  if (arr.modo === 'mov'){
+    arr.c.x = +Math.min(100 - arr.c.w, Math.max(0, arr.x + dx)).toFixed(2);
+    arr.c.y = +Math.min(100 - arr.c.h, Math.max(0, arr.y + dy)).toFixed(2);
+  } else {
+    arr.c.w = +Math.min(100 - arr.c.x, Math.max(1, arr.w + dx)).toFixed(2);
+    arr.c.h = +Math.min(100 - arr.c.y, Math.max(1, arr.h + dy)).toFixed(2);
+  }
+  cajas(); sincronizarNumeros(); pintar();
+});
+window.addEventListener('pointerup', function(){ arr = null; });
+
+window.addEventListener('keydown', function(ev){
+  var c = campo(); if (!c) return;
+  if (document.activeElement && /input|textarea|select/i.test(document.activeElement.tagName)) return;
+  var paso = ev.shiftKey ? 1 : 0.2, hecho = true;
+  if (ev.key === 'ArrowLeft') c.x = +Math.max(0, c.x - paso).toFixed(2);
+  else if (ev.key === 'ArrowRight') c.x = +Math.min(100 - c.w, c.x + paso).toFixed(2);
+  else if (ev.key === 'ArrowUp') c.y = +Math.max(0, c.y - paso).toFixed(2);
+  else if (ev.key === 'ArrowDown') c.y = +Math.min(100 - c.h, c.y + paso).toFixed(2);
+  else hecho = false;
+  if (hecho){ ev.preventDefault(); cajas(); sincronizarNumeros(); pintar(); }
+});
+function sincronizarNumeros(){
+  var c = campo(); if (!c) return;
+  ['x','y','w','h'].forEach(function(k){
+    var el = document.querySelector('[data-prop="'+k+'"]');
+    if (el && document.activeElement !== el) el.value = c[k];
+  });
+}
+
+/* ============ LISTAS ============ */
+function listas(){
+  var cont = $('#listaEsc'); cont.innerHTML = '';
+  D.escuelas.forEach(function(e){
+    var d = document.createElement('div'); d.className = 'esc';
+    var h = document.createElement('h4');
+    h.innerHTML = '<span class="pt" style="background:'+(e.color||'#c5572a')+'"></span>' +
+                  '<span>'+esc(e.corto || e.nombre)+'</span>';
+    var lk = document.createElement('button'); lk.className = 'ed'; lk.textContent = '\u26AD'; lk.title = 'Copiar liga para clientes';
+    lk.onclick = function(ev){ ev.stopPropagation(); copiarLiga(e); };
+    var b = document.createElement('button'); b.className = 'ed'; b.textContent = '\u270E'; b.title = 'Editar escuela';
+    b.onclick = function(ev){ ev.stopPropagation(); modalEscuela(e); };
+    h.appendChild(lk); h.appendChild(b); d.appendChild(h);
+    e.plantillas.forEach(function(p){
+      var fila = document.createElement('div');
+      fila.style.cssText = 'display:flex;align-items:stretch;gap:0';
+
+      var t = document.createElement('button');
+      t.className = 'plt' + (p.id === pltSel ? ' on' : '');
+      t.style.flex = '1';
+      t.innerHTML = '<span class="n">'+p.campos.filter(function(c){return c.tipo!=='corte';}).length+'</span>' +
+                    (p.gafete ? '<span title="Es el gafete de esta escuela" style="margin-right:5px">\uD83C\uDFF7\uFE0F</span>' : '') +
+                    esc(p.nombre);
+      t.onclick = function(){ escSel = e.id; pltSel = p.id; campoSel = null; todo(); };
+      fila.appendChild(t);
+
+      // Cambiar el nombre de la plantilla
+      var r = document.createElement('button');
+      r.className = 'ed'; r.textContent = '\u270E'; r.title = 'Cambiar el nombre';
+      r.style.cssText = 'flex:none;align-self:center;margin:0 2px';
+      r.onclick = function(ev){
+        ev.stopPropagation();
+        var nom = prompt('Nombre de la plantilla:', p.nombre);
+        if (nom === null) return;
+        nom = nom.trim();
+        if (!nom) return avisar('El nombre no puede quedar vacío', true);
+        var repe = e.plantillas.some(function(x){
+          return x.id !== p.id && x.nombre.toLowerCase() === nom.toLowerCase(); });
+        if (repe) return avisar('Ya hay otra plantilla con ese nombre en esta escuela', true);
+        p.nombre = nom;
+        listas(); panel();
+        avisar('Nombre cambiado. No olvides Guardar.');
+      };
+      fila.appendChild(r);
+
+      // Marcar / desmarcar como gafete
+      var g = document.createElement('button');
+      g.className = 'ed'; g.textContent = '\uD83C\uDFF7\uFE0F';
+      g.title = p.gafete ? 'Es el gafete: quitar la marca' : 'Marcar como gafete de esta escuela';
+      g.style.cssText = 'flex:none;align-self:center;margin:0 4px 0 0;opacity:' + (p.gafete ? '1' : '.35');
+      g.onclick = function(ev){
+        ev.stopPropagation();
+        if (p.gafete){
+          p.gafete = false;
+          avisar('Ya no es el gafete. No olvides Guardar.');
+        } else {
+          // Solo una plantilla por escuela puede ser el gafete
+          e.plantillas.forEach(function(x){ x.gafete = false; });
+          p.gafete = true;
+          avisar('"'+p.nombre+'" queda como gafete obligatorio de '+(e.corto||e.nombre)+'. No olvides Guardar.');
+        }
+        listas();
+      };
+      fila.appendChild(g);
+
+      d.appendChild(fila);
+    });
+    cont.appendChild(d);
+  });
+
+  var lc = $('#listaCampos'); lc.innerHTML = '';
+  var p = plantilla();
+  if (!p){ lc.innerHTML = '<p class="vacio">Crea o elige una plantilla.</p>'; return; }
+  p.campos.forEach(function(c, i){
+    var b = document.createElement('div');
+    b.className = 'cmp' + (c.id === campoSel ? ' on' : '');
+    b.tabIndex = 0;
+    b.innerHTML = '<span class="tp t-'+c.tipo+'">'+c.tipo.charAt(0).toUpperCase()+'</span>' +
+                  '<span class="nom">'+esc(c.etiqueta || c.id)+'</span>';
+    var sub = document.createElement('button');
+    sub.className = 'mv'; sub.title = 'Subir en el formulario'; sub.textContent = '\u2191';
+    sub.onclick = function(ev){
+      ev.stopPropagation();
+      if (i > 0){ p.campos.splice(i-1, 0, p.campos.splice(i,1)[0]); listas(); }
+    };
+    b.appendChild(sub);
+    b.onclick = function(){ campoSel = c.id; panel(); cajas(); listas(); };
+    b.onkeydown = function(ev){ if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); b.click(); } };
+    lc.appendChild(b);
+  });
+  $('#tituloPlt').textContent = (escuela() ? escuela().corto + ' \u00b7 ' : '') + p.nombre;
+  var m = CEDULA.medidas(p.w, p.h);
+  $('#medidas').textContent = p.w + ' \u00d7 ' + p.h + ' px \u00b7 ' + m.texto + ' a ' + CEDULA.PPP + ' ppp';
+  $('#medidas').className = 'med' + (Math.min(p.w, p.h) < 700 ? ' baja' : '');
+  $('#medidas').title = Math.min(p.w, p.h) < 700
+    ? 'La plantilla es chica: a 300 ppp saldr\u00e1 de este tama\u00f1o f\u00edsico. Sube una versi\u00f3n de m\u00e1s p\u00edxeles si la necesitas m\u00e1s grande.'
+    : 'Tama\u00f1o real de impresi\u00f3n. La plantilla se conserva sin recomprimir.';
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(m){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+
+/* ============ PANEL PROPIEDADES ============ */
+function panel(){
+  var cont = $('#props'), c = campo();
+  if (!c){ cont.innerHTML = '<p class="vacio">Selecciona un campo en el lienzo o en la lista para editar su posición, tamaño y estilo.</p>'; return; }
+  var esCorte = c.tipo === 'corte', esImg = c.tipo === 'foto' || c.tipo === 'firma';
+  var h = '';
+  h += '<div class="campo"><label>Nombre que verá el cliente</label><input type="text" data-prop="etiqueta" value="'+esc(c.etiqueta)+'"></div>';
+  if (!esCorte){
+    h += '<div class="campo"><label>Tipo</label><select data-prop="tipo">' +
+      ['texto','parrafo','lista','horario','foto','firma'].map(function(t){
+        return '<option value="'+t+'"'+(c.tipo===t?' selected':'')+'>'+
+        {texto:'Texto (una línea)',parrafo:'Párrafo (varias líneas)',lista:'Lista para elegir',horario:'Horario (de hora a hora)',foto:'Fotografía',firma:'Firma con el dedo'}[t]+'</option>';
+      }).join('') + '</select></div>';
+    h += '<div class="campo"><label>Instrucción para el cliente</label><input type="text" data-prop="ayuda" value="'+esc(c.ayuda||'')+'" placeholder="Opcional"></div>';
+    h += '<label class="chk"><input type="checkbox" data-prop="req"'+(c.req?' checked':'')+'> Obligatorio</label>';
+    // Valor fijo: lo llena el estudio, no el cliente
+    if (c.tipo === 'texto' || c.tipo === 'lista' || c.tipo === 'horario'){
+      h += '<label class="chk"><input type="checkbox" data-prop="fijo"'+(c.fijo?' checked':'')+'> Lo lleno yo (valor fijo, el cliente no lo ve)</label>';
+      if (c.fijo){
+        h += '<div class="campo"><label>Valor fijo (lo que saldrá en la credencial)</label>' +
+          '<input type="text" data-prop="valorFijo" value="'+esc(c.valorFijo||'')+'" placeholder="Ej: 2025 - 2026"></div>';
+      }
+    }
+  }
+  // Opciones de la LISTA (una por línea)
+  if (c.tipo === 'lista'){
+    var ops = (c.opciones || []).join('\n');
+    h += '<div class="campo"><label>Opciones de la lista (una por línea)</label>' +
+      '<textarea data-prop="opcionesTexto" rows="5" placeholder="Sala Maternal\nSala 1\nSala 2\nPreescolar">'+esc(ops)+'</textarea></div>';
+  }
+  h += '<p class="rot">Posición y tamaño (%)</p><div class="fila">' +
+    ['x','y','w','h'].map(function(k){
+      return '<div class="campo"><label>'+{x:'Izquierda',y:'Arriba',w:'Ancho',h:'Alto'}[k]+'</label>'+
+        '<input type="number" step="0.1" data-prop="'+k+'" value="'+c[k]+'"></div>';
+    }).join('') + '</div>';
+
+  if (c.tipo === 'texto' || c.tipo === 'parrafo' || c.tipo === 'lista' || c.tipo === 'horario'){
+    h += '<p class="rot">Estilo del texto</p>';
+    h += '<div class="fila"><div class="campo"><label>Tamaño</label><input type="number" step="0.05" data-prop="tam" value="'+c.tam+'"></div>' +
+         '<div class="campo"><label>Color</label><input type="text" data-prop="color" value="'+esc(c.color)+'"></div></div>';
+    h += '<div class="campo"><label>Tipografía</label><select data-prop="fuente">' +
+      ['Arial','Helvetica','Times New Roman','Georgia','Courier New','Verdana','Tahoma'].map(function(f){
+        return '<option'+((c.fuente||'Arial')===f?' selected':'')+'>'+f+'</option>'; }).join('') + '</select></div>';
+    h += '<div class="campo"><label>Grosor</label><div class="seg" data-seg="peso">' +
+      '<button data-v="400" class="'+(c.peso!==700?'on':'')+'">Normal</button>' +
+      '<button data-v="700" class="'+(c.peso===700?'on':'')+'">Negrita</button></div></div>';
+    h += '<div class="campo"><label>Alineación</label><div class="seg" data-seg="align">' +
+      ['left','center','right'].map(function(a){
+        return '<button data-v="'+a+'" class="'+((c.align||'left')===a?'on':'')+'">'+
+        {left:'Izq.',center:'Centro',right:'Der.'}[a]+'</button>'; }).join('') + '</div></div>';
+    h += '<label class="chk"><input type="checkbox" data-prop="mayus"'+(c.mayus?' checked':'')+'> Convertir a MAYÚSCULAS</label>';
+    h += '<div class="campo"><label>Texto de ejemplo</label><input type="text" data-prop="muestra" value="'+esc(c.muestra||'')+'" placeholder="'+esc(muestraDe(c))+'"></div>';
+  }
+  if (esCorte) h += '<p class="vacio">Esta zona no se imprime: marca el recorte que el cliente podrá descargar por separado.</p>';
+
+  h += '<div class="fila" style="margin-top:14px">' +
+       '<button class="b oscuro chico" id="bDupCampo">Duplicar</button>' +
+       '<button class="b oscuro chico" id="bDelCampo">Eliminar</button></div>';
+  cont.innerHTML = h;
+
+  cont.querySelectorAll('[data-prop]').forEach(function(el){
+    var k = el.dataset.prop;
+    el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', function(){
+      var c2 = campo(); if (!c2) return;
+      if (el.type === 'checkbox') c2[k] = el.checked;
+      else if (el.type === 'number') c2[k] = parseFloat(el.value) || 0;
+      else if (k === 'opcionesTexto'){
+        c2.opciones = el.value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+      }
+      else c2[k] = el.value;
+      if (k === 'tipo'){ panel(); }
+      if (k === 'fijo'){ panel(); }
+      if (k === 'etiqueta' || k === 'tipo') listas();
+      cajas(); pintar();
+    });
+  });
+  cont.querySelectorAll('[data-seg]').forEach(function(g){
+    g.querySelectorAll('button').forEach(function(b){
+      b.onclick = function(){
+        var c2 = campo(); if (!c2) return;
+        var v = b.dataset.v;
+        c2[g.dataset.seg] = (g.dataset.seg === 'peso') ? parseInt(v,10) : v;
+        g.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+        b.classList.add('on'); pintar();
+      };
+    });
+  });
+  $('#bDupCampo').onclick = function(){
+    var p = plantilla(), c2 = campo(); if (!p || !c2) return;
+    var n = CEDULA.clonar(c2); n.id = CEDULA.uid('c'); n.etiqueta = c2.etiqueta + ' (copia)';
+    n.y = Math.min(96, n.y + n.h + 1);
+    p.campos.splice(p.campos.indexOf(c2) + 1, 0, n);
+    campoSel = n.id; todo();
+  };
+  $('#bDelCampo').onclick = function(){
+    var p = plantilla(), c2 = campo(); if (!p || !c2) return;
+    if (!confirm('¿Eliminar el campo "' + c2.etiqueta + '"?')) return;
+    p.campos.splice(p.campos.indexOf(c2), 1); campoSel = null; todo();
+  };
+}
+
+/* ============ NUEVOS CAMPOS ============ */
+document.querySelectorAll('[data-nuevo]').forEach(function(b){
+  b.onclick = function(){
+    var p = plantilla(); if (!p) return avisar('Primero elige una plantilla', true);
+    var t = b.dataset.nuevo;
+    var n = {
+      id: CEDULA.uid('c'),
+      etiqueta: {texto:'NUEVO TEXTO',parrafo:'NUEVO PÁRRAFO',lista:'NUEVA LISTA',horario:'HORARIO',foto:'NUEVA FOTO',firma:'NUEVA FIRMA',corte:'NUEVA ZONA'}[t],
+      tipo: t, x: 10, y: 10, w: t === 'corte' ? 40 : 22, h: t === 'foto' ? 20 : (t === 'corte' ? 60 : (t === 'firma' ? 7 : 4)),
+      tam: 2, peso: 400, color:'#111111', align:'left', mayus: true, req: false, ayuda:'', fuente:'Arial', pos:50, zoom:1
+    };
+    if (t === 'lista') n.opciones = ['Opción 1','Opción 2'];
+    p.campos.push(n); campoSel = n.id; todo();
+  };
+});
+
+/* ============ ESCUELAS Y PLANTILLAS ============ */
+function abrirModal(html, alMontar){
+  $('#modal').innerHTML = html; $('#velo').classList.add('on');
+  if (alMontar) alMontar($('#modal'));
+}
+function cerrarModal(){ $('#velo').classList.remove('on'); }
+$('#velo').addEventListener('click', function(e){ if (e.target === $('#velo')) cerrarModal(); });
+
+function modalEscuela(e){
+  var nueva = !e;
+  abrirModal(
+    '<h3>' + (nueva ? 'Nueva escuela' : 'Editar escuela') + '</h3>' +
+    '<div class="campo"><label>Nombre completo</label><input type="text" id="mNombre" value="'+esc(nueva?'':e.nombre)+'" placeholder="CENTRO DE ATENCIÓN INFANTIL No. 4"></div>' +
+    '<div class="fila"><div class="campo"><label>Nombre corto</label><input type="text" id="mCorto" value="'+esc(nueva?'':e.corto)+'" placeholder="CAI 4"></div>' +
+    '<div class="campo"><label>Código de la liga</label><input type="text" id="mCodigo" value="'+esc(nueva?'':e.codigo||'')+'" placeholder="CAI4"></div></div>' +
+    '<div class="fila"><div class="campo"><label>Clave C.T.</label><input type="text" id="mClave" value="'+esc(nueva?'':e.clave||'')+'"></div>' +
+    '<div class="campo"><label>Ciudad</label><input type="text" id="mCiudad" value="'+esc(nueva?'':e.ciudad||'Iguala, Gro.')+'"></div></div>' +
+    '<div class="fila"><div class="campo"><label>Color de la tarjeta</label><input type="text" id="mColor" value="'+esc(nueva?'#c5572a':e.color||'#c5572a')+'"></div>' +
+    '<div class="campo"><label>WhatsApp del estudio</label><input type="text" id="mWa" value="'+esc(nueva?'':e.wa||'')+'" placeholder="521733..."></div></div>' +
+    '<div class="pie">' + (nueva ? '' : '<button class="b oscuro" id="mBorrar">Eliminar escuela</button>') +
+    '<button class="b oscuro" id="mCancel">Cancelar</button><button class="b oscuro pri" id="mOk">Guardar</button></div>',
+    function(m){
+      m.querySelector('#mCancel').onclick = cerrarModal;
+      m.querySelector('#mOk').onclick = function(){
+        var nom = m.querySelector('#mNombre').value.trim();
+        if (!nom) return avisar('Escribe el nombre de la escuela', true);
+        var obj = e || { id: CEDULA.uid('esc'), plantillas: [] };
+        obj.nombre = nom;
+        obj.corto = m.querySelector('#mCorto').value.trim() || nom.slice(0, 12);
+        obj.codigo = m.querySelector('#mCodigo').value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (!obj.codigo) obj.codigo = normaliza(obj.corto);
+        var choca = D.escuelas.some(function(o){ return o !== obj && normaliza(o.codigo) === obj.codigo; });
+        if (choca) return avisar('Ese código ya lo usa otra escuela', true);
+        obj.clave = m.querySelector('#mClave').value.trim();
+        obj.ciudad = m.querySelector('#mCiudad').value.trim();
+        obj.color = m.querySelector('#mColor').value.trim() || '#c5572a';
+        obj.wa = m.querySelector('#mWa').value.replace(/[^0-9]/g, '');
+        if (nueva){ D.escuelas.push(obj); escSel = obj.id; pltSel = null; campoSel = null; }
+        cerrarModal(); todo(); avisar('Escuela guardada');
+      };
+      var bb = m.querySelector('#mBorrar');
+      if (bb) bb.onclick = function(){
+        if (!confirm('¿Eliminar "' + e.nombre + '" y todas sus plantillas?')) return;
+        D.escuelas.splice(D.escuelas.indexOf(e), 1);
+        escSel = D.escuelas[0] ? D.escuelas[0].id : null;
+        pltSel = D.escuelas[0] && D.escuelas[0].plantillas[0] ? D.escuelas[0].plantillas[0].id : null;
+        cerrarModal(); todo();
+      };
+    });
+}
+$('#bNuevaEsc').onclick = function(){ modalEscuela(null); };
+
+$('#bServidor').onclick = function(){
+  abrirModal(
+    '<h3>Conexión</h3>' +
+    '<div class="campo"><label>URL de Google Apps Script (termina en /exec)</label>' +
+    '<input type="text" id="mSrv" value="'+esc(D.servidor||'')+'" placeholder="https://script.google.com/macros/s/.../exec"></div>' +
+    '<div class="campo"><label>Dirección pública de cliente.html</label>' +
+    '<input type="text" id="mLiga" value="'+esc(D.ligaBase||'')+'" placeholder="https://edgarucho.github.io/CEDU-LA/cliente.html"></div>' +
+    '<p class="vacio">La primera dice a dónde se guardan las credenciales en Drive. La segunda arma las ligas que envías por WhatsApp.</p>' +
+    '<div class="campo"><label>Formato del archivo final</label><select id="mFmt">' +
+    '<option value="jpeg"' + (D.formato !== 'png' ? ' selected' : '') + '>JPG calidad 95 (recomendado)</option>' +
+    '<option value="png"' + (D.formato === 'png' ? ' selected' : '') + '>PNG sin pérdida (archivos mucho más pesados)</option>' +
+    '</select></div>' +
+    '<p class="vacio">Cualquiera de los dos sale a ' + CEDULA.PPP + ' ppp con perfil sRGB incrustado, al tamaño exacto de la plantilla.</p>' +
+    '<div class="pie"><button class="b oscuro" id="mCancel">Cancelar</button>' +
+    '<button class="b oscuro pri" id="mOk">Guardar</button></div>',
+    function(m){
+      m.querySelector('#mCancel').onclick = cerrarModal;
+      m.querySelector('#mOk').onclick = function(){
+        D.servidor = m.querySelector('#mSrv').value.trim();
+        D.ligaBase = m.querySelector('#mLiga').value.trim().replace(/\?.*$/, '');
+        D.formato = m.querySelector('#mFmt').value;
+        cerrarModal(); avisar('Conexión guardada. No olvides exportar plantillas.js');
+      };
+    });
+};
+
+$('#bNuevaPlt').onclick = function(){
+  if (!escuela()) return avisar('Primero crea una escuela', true);
+  $('#fileImg').click();
+};
+$('#fileImg').addEventListener('change', function(){
+  var f = this.files[0]; this.value = '';
+  if (!f) return;
+  CEDULA.leerPlantilla(f).then(function(r){
+    var nom = prompt('Nombre de la plantilla (CREDENCIAL, GAFETE, etc.)', 'CREDENCIAL');
+    if (!nom) return;
+    var copiar = escuela().plantillas.length && confirm('¿Copiar los campos de la plantilla actual? Útil si es el mismo diseño con otro título.');
+    var p = {
+      id: CEDULA.uid('plt'), nombre: nom.toUpperCase(), w: r.w, h: r.h, imagen: r.src,
+      campos: copiar && plantilla() ? CEDULA.clonar(plantilla().campos) : []
+    };
+    escuela().plantillas.push(p); pltSel = p.id; campoSel = null; todo();
+    avisar('Plantilla agregada sin modificar: ' + r.w + ' \u00d7 ' + r.h + ' px');
+  }).catch(function(e){ avisar(e.message, true); });
+});
+
+$('#bDupPlt').onclick = function(){
+  var p = plantilla(); if (!p) return;
+  var n = CEDULA.clonar(p); n.id = CEDULA.uid('plt'); n.nombre = p.nombre + ' COPIA';
+  escuela().plantillas.push(n); pltSel = n.id; todo();
+};
+
+// Reemplazar SOLO la imagen de fondo de la plantilla actual (los campos se quedan)
+$('#bFondo').onclick = function(){
+  if (!plantilla()) return avisar('Primero elige una plantilla', true);
+  $('#fileFondo').click();
+};
+$('#fileFondo').addEventListener('change', function(){
+  var f = this.files[0]; this.value = '';
+  if (!f) return;
+  var p = plantilla(); if (!p) return;
+  CEDULA.leerPlantilla(f).then(function(r){
+    var arVieja = p.w / p.h, arNueva = r.w / r.h;
+    if (Math.abs(arVieja - arNueva) > 0.02){
+      if (!confirm('La nueva imagen tiene otra proporción (' + r.w + '×' + r.h + ' px, antes ' + p.w + '×' + p.h + ' px). Los campos podrían descuadrarse un poco. ¿Continuar?')) return;
+    }
+    p.imagen = r.src; p.w = r.w; p.h = r.h;
+    todo();
+    avisar('Fondo reemplazado. Revisa que los campos queden bien y da Guardar.');
+  }).catch(function(e){ avisar(e.message, true); });
+});
+$('#bDelPlt').onclick = function(){
+  var p = plantilla(); if (!p) return;
+  if (!confirm('¿Eliminar la plantilla "' + p.nombre + '"?')) return;
+  var e = escuela(); e.plantillas.splice(e.plantillas.indexOf(p), 1);
+  pltSel = e.plantillas[0] ? e.plantillas[0].id : null; campoSel = null; todo();
+};
+
+/* ============ BARRA ============ */
+$('#bGuias').onclick = function(){ verGuias = !verGuias; this.classList.toggle('on', verGuias); cajas(); };
+$('#bMuestra').onclick = function(){ verMuestra = !verMuestra; this.classList.toggle('on', verMuestra); pintar(); };
+$('#bGuardar').onclick = function(){
+  CEDULA.guardarDatos(D);        // borrador local (por si se cae la publicación)
+  sincronizarEscuelasPOS();      // lista ligera de escuelas para el POS
+  publicarEnGitHub();            // ← el archivo credenciales-plantillas.js
+};
+
+/* ===== Sincronización con el Punto de Venta (Supabase) ===== */
+var SUPA_URL = 'https://ezbvcwteeggvlpyqgcer.supabase.co';
+var SUPA_KEY = 'sb_publishable_44SQZF-WnOIBSADrP6Jwsg_daAiQ-nR';
+var _sb = null;
+function sbCliente(){
+  if (_sb) return _sb;
+  try { _sb = window.supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e){ _sb = null; }
+  return _sb;
+}
+function sincronizarEscuelasPOS(){
+  var sb = sbCliente();
+  if (!sb){ return; }
+  // Lista ligera de escuelas (lo que el POS necesita para las tarjetas y las ligas)
+  var lista = (D.escuelas || []).map(function(e){
+    return { id:e.id, nombre:e.nombre, corto:e.corto||e.nombre, codigo:e.codigo||e.id,
+             clave:e.clave||'', ciudad:e.ciudad||'', color:e.color||'#c5572a' };
+  });
+  sb.from('kv').upsert({ key:'credEscuelas', value: lista }).then(function(res){
+    if (res && res.error) avisar('No se pudo sincronizar con el POS: ' + res.error.message, true);
+  });
+}
+/* ===== Publicar el archivo credenciales-plantillas.js en GitHub =====
+   El texto que se sube es EXACTAMENTE el mismo que baja el botón Exportar.
+   La llave de GitHub vive en el Apps Script, nunca en esta página.          */
+var CRED_BACKEND = "https://script.google.com/macros/s/AKfycbxN01-DfwGkwwfilu6lfk_AYMMLa1S2SfJCkKYRMOYve948MtRB93N9blMU9vamD72I/exec";
+
+function pinPublicar(){
+  var p = sessionStorage.getItem('cedula_pin');
+  if (!p){
+    p = prompt('PIN para publicar:');
+    if (!p) return '';
+    sessionStorage.setItem('cedula_pin', p);
+  }
+  return p;
+}
+
+function publicarEnGitHub(){
+  // Red de seguridad: nunca publicar una plantilla que se quedó sin fondo.
+  var sinFondo = [];
+  (D.escuelas || []).forEach(function(e){
+    (e.plantillas || []).forEach(function(p){
+      if (!p.imagen) sinFondo.push((e.corto || e.nombre) + ' → ' + (p.nombre || p.id));
+    });
+  });
+  if (sinFondo.length && !confirm(
+      'OJO: estas plantillas no tienen fondo y saldrían en blanco:\n\n' +
+      sinFondo.join('\n') + '\n\n¿Publicar de todos modos?')) {
+    avisar('Publicación cancelada. Sube el fondo que falta.', true);
+    return;
+  }
+
+  var pin = pinPublicar();
+  if (!pin){ avisar('Publicación cancelada. Los cambios siguen guardados aquí.', true); return; }
+  var texto = CEDULA.textoJS(D);      // esto sella D.generado
+  avisar('Publicando en GitHub… (tarda ~1 minuto en verse)');
+  fetch(CRED_BACKEND, {
+    method:'POST', redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'guardarplantillas', pin:pin, contenido:texto })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    if (res && res.ok){
+      CEDULA.guardarDatos(D);         // vuelve a sellar el borrador ya publicado
+      avisar('✓ Publicado en GitHub. En ~1 minuto lo ven las tablets y los clientes.');
+    } else {
+      var e = (res && res.error) || 'error';
+      if (e === 'pin') sessionStorage.removeItem('cedula_pin');
+      avisar('No se pudo publicar (' + e + '). Usa Exportar y sube el archivo a mano.', true);
+    }
+  }).catch(function(){
+    avisar('No se pudo conectar. Usa Exportar y sube el archivo a mano.', true);
+  });
+}
+$('#bExportar').onclick = function(){
+  CEDULA.exportarJS(D);
+  avisar('Descargado. Sube credenciales-plantillas.js a tu repositorio.');
+};
+$('#bImportar').onclick = function(){ $('#fileJs').click(); };
+$('#fileJs').addEventListener('change', function(){
+  var f = this.files[0]; this.value = ''; if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function(){
+    try {
+      var t = String(fr.result);
+      var i = t.indexOf('{'), j = t.lastIndexOf('}');
+      var obj = JSON.parse(i >= 0 ? t.slice(i, j + 1) : t);
+      if (!obj.escuelas) throw new Error('Archivo sin escuelas');
+      D = obj;
+      escSel = D.escuelas[0] ? D.escuelas[0].id : null;
+      pltSel = D.escuelas[0] && D.escuelas[0].plantillas[0] ? D.escuelas[0].plantillas[0].id : null;
+      campoSel = null; todo(); avisar('Plantillas importadas');
+    } catch (e){ avisar('Archivo no válido', true); }
+  };
+  fr.readAsText(f);
+});
+$('#bRestaurar').onclick = function(){
+  if (!confirm('Se descartan los cambios guardados en este navegador y se vuelve al archivo credenciales-plantillas.js. ¿Continuar?')) return;
+  CEDULA.borrarLocal(); location.reload();
+};
+
+/* ============ INICIO ============ */
+function todo(){ listas(); panel(); pintar(); }
+todo();
+}
+</script>
+</body>
+</html>
