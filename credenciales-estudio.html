@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminar credencial · Foto Graciela</title>
+<style>
+  :root{ --tinta:#241d16; --papel:#f6efe5; --acento:#c5572a; --ok:#1f7a4d; --linea:#e6ddd0; --muted:#8a7a66; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--papel);color:var(--tinta);font-family:"Segoe UI",system-ui,-apple-system,sans-serif}
+  header{background:var(--tinta);color:var(--papel);padding:14px 18px;display:flex;align-items:center;gap:10px}
+  header b{font-size:16px;letter-spacing:.02em}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 16px}
+  .cols{display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start}
+  @media(max-width:820px){ .cols{grid-template-columns:1fr} }
+  .previa{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px;text-align:center;
+          position:sticky;top:14px}
+  @media(max-width:820px){ .previa{position:static} }
+  .previa canvas{max-width:100%;height:auto;border-radius:6px}
+  .panel{background:#fffdf9;border:1px solid var(--linea);border-radius:12px;padding:16px}
+  .campo{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--linea)}
+  .campo:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+  .campo h3{margin:0 0 8px;font-size:15px}
+  .sub-foto{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+  .mini{width:56px;height:56px;border-radius:8px;background:#eee center/cover no-repeat;border:1px solid var(--linea);flex:none}
+  .b{padding:9px 14px;border:none;border-radius:9px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;background:#efe7d9;color:var(--tinta)}
+  .b.pri{background:var(--acento);color:#fff}
+  .b.ok{background:var(--ok);color:#fff}
+  .b.gr{width:100%;padding:14px;font-size:16px;margin-top:10px}
+  .ctrl{margin-top:8px}
+  .fprev{display:block;width:100%;max-width:170px;margin:0 auto 8px;border:2px solid var(--acento,#c5572a);border-radius:8px;background:#f0ece4}
+  .fprev.arrastra{cursor:grab;touch-action:none}
+  .fprev.arrastra:active{cursor:grabbing}
+  .pista{margin:0 0 9px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.4}
+  #lienzo{touch-action:none}
+  #lienzo.sobrefoto{cursor:grab}
+  #lienzo.arrastrando{cursor:grabbing}
+
+  /* Miniaturas: todo a la vista, se abre una a la vez */
+  .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-bottom:10px}
+  .thumb{border:2px solid var(--linea);border-radius:9px;background:#fff;padding:5px;cursor:pointer;
+         font-family:inherit;text-align:center;transition:border-color .15s}
+  .thumb:hover{border-color:#d8cbb8}
+  .thumb.on{border-color:var(--acento);box-shadow:0 0 0 2px rgba(197,87,42,.15)}
+  .thumb .th-im{display:block;width:100%;aspect-ratio:1/1;border-radius:6px;background:#f0ece4 center/cover no-repeat;margin-bottom:4px}
+  .thumb .th-nm{display:block;font-size:10.5px;line-height:1.2;color:var(--muted);font-weight:700;
+                overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .thumb.falta .th-im{background:#f7ece6;border:1.5px dashed var(--acento)}
+  .editor{border:1px solid var(--linea);border-radius:10px;padding:11px;background:#fff;margin-bottom:10px}
+  .editor .cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+  .editor .cab b{font-size:13.5px}
+  .ctrl label{margin:5px 0 1px}
+  .ctrl input[type=range]{margin:0}
+  .frow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .fmini{width:104px;height:44px;border:1px solid var(--linea);border-radius:7px;background:#fff center/contain no-repeat;flex:none}
+  /* Lienzo para firmar */
+  .velo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .velo.on{display:flex}
+  .velo .caja{background:#fff;border-radius:14px;padding:16px;max-width:560px;width:100%}
+  #firmaLienzo{width:100%;height:190px;border:2px dashed var(--linea);border-radius:10px;background:#fff;touch-action:none;display:block}
+  .ctrl label{display:block;font-size:12px;color:var(--muted);margin:6px 0 2px;font-weight:600}
+  .ctrl input[type=range]{width:100%}
+  .rotval{font-weight:700;color:var(--acento)}
+  .estado{text-align:center;padding:40px 20px}
+  .rueda{width:42px;height:42px;border:4px solid #e6ddd0;border-top-color:var(--acento);border-radius:50%;margin:0 auto 14px;animation:giro 1s linear infinite}
+  @keyframes giro{to{transform:rotate(360deg)}}
+  .aviso{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+  .aviso.on{opacity:1}
+  .info{background:#f2ece1;border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted);margin-bottom:14px}
+  .secc{margin-bottom:14px}
+  .secc>h3{margin:6px 0 10px;font-size:15px;border-bottom:2px solid var(--linea);padding-bottom:5px}
+  .campo>h4{margin:0 0 6px;font-size:13.5px}
+  .lb{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:8px 0 3px}
+  .panel input[type=text], .panel textarea, .panel select, .panel input[type=time]{
+    width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--linea);border-radius:8px;font-family:inherit;font-size:14px;background:#fff}
+  .panel textarea{min-height:56px;resize:vertical}
+  .hr{display:flex;align-items:center;gap:8px}
+  .hr input{flex:1}
+</style>
+</head>
+<body>
+<header><b>🎫 Terminar credencial · Foto Graciela</b></header>
+<div class="wrap" id="wrap">
+  <div class="estado"><div class="rueda"></div><p>Cargando la credencial…</p></div>
+</div>
+<div class="aviso" id="aviso"></div>
+
+<div class="velo" id="veloFirma">
+  <div class="caja">
+    <h3 style="margin:0 0 4px;font-size:17px">Firma</h3>
+    <p style="margin:0 0 10px;color:#8a7a66;font-size:13px">Firma con el dedo o el mouse.</p>
+    <canvas id="firmaLienzo"></canvas>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
+      <button class="b" id="fBorrar">Borrar</button>
+      <button class="b" id="fCancel">Cancelar</button>
+      <button class="b pri" id="fOk">Usar esta firma</button>
+    </div>
+  </div>
+</div>
+
+<script src="credenciales-motor.js"></script>
+<script>
+(function(){
+'use strict';
+var CRED_BACKEND = "https://script.google.com/macros/s/AKfycbxN01-DfwGkwwfilu6lfk_AYMMLa1S2SfJCkKYRMOYve948MtRB93N9blMU9vamD72I/exec";
+var $ = function(s){ return document.querySelector(s); };
+var wrap = $('#wrap');
+var folio = new URLSearchParams(location.search).get('folio') || '';
+var D = (window.PLANTILLAS_BASE || { escuelas: [] });
+var E = null, plt = null, V = {}, meta = {};
+
+function aviso(t){ var a=$('#aviso'); a.textContent=t; a.classList.add('on'); setTimeout(function(){a.classList.remove('on');},2200); }
+
+if (!folio){ wrap.innerHTML = '<h1>Falta el folio</h1><p class="sub">Abre esta página desde el Punto de Venta.</p>'; return; }
+
+// Fetch con límite de tiempo (para que NUNCA se quede cargando para siempre)
+function fetchT(url, opts, ms){
+  var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  opts = opts || {}; if (ctrl) opts.signal = ctrl.signal;
+  var t = setTimeout(function(){ if(ctrl) ctrl.abort(); }, ms || 25000);
+  return fetch(url, opts).then(function(r){ clearTimeout(t); return r; },
+                              function(e){ clearTimeout(t); throw e; });
+}
+
+// 0) Cargar los diseños del archivo credenciales-plantillas.js de GitHub, sin caché.
+function cargarPlantillasNubeE(){
+  return CEDULA.cargarArchivo().then(function(base){
+    if (base && base.escuelas && base.escuelas.length) D = base;
+  }).catch(function(){ /* sin internet: seguimos con lo que haya */ });
+}
+
+// 1) Traer los datos guardados de la credencial y armar el editor
+function cargarCredencial(){
+  wrap.innerHTML = '<div class="estado"><div class="rueda"></div><p>Cargando la credencial…</p></div>';
+  cargarPlantillasNubeE().then(function(){
+    return fetchT(CRED_BACKEND, {
+      method:'POST', redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'credpend', folio: folio })
+    }, 30000).then(function(r){ return r.json(); });
+  }).then(function(res){
+    if (!res || !res.ok){ throw new Error((res && res.error) || 'error'); }
+    meta = res.datos || {};
+    V = meta.valores || {};
+    // Los campos "lo lleno yo" se rellenan siempre, aunque la credencial
+    // se haya creado antes de que existiera ese campo.
+    (plt.campos||[]).forEach(function(c){
+      if (c.fijo && c.valorFijo != null && String(c.valorFijo) !== '') V[c.id] = String(c.valorFijo);
+    });
+    E = (D.escuelas||[]).find(function(e){
+      return (e.codigo && meta.codigo && e.codigo.toUpperCase()===String(meta.codigo).toUpperCase()) || e.id===meta.codigo;
+    });
+    if (E) plt = (E.plantillas||[]).find(function(p){ return p.id===meta.plantillaId || p.nombre===meta.documento; });
+    // Si por algún motivo vino apuntando al gafete, se cambia a la credencial:
+    // el gafete no se llena a mano, se genera solo con estos datos.
+    if (E && plt && plt.gafete){
+      var cred = (E.plantillas||[]).filter(function(p){ return !p.gafete; })[0];
+      if (cred) plt = cred;
+    }
+    if (!E || !plt){ throw new Error('sin_plantilla'); }
+    if (typeof CEDULA==='undefined'){ throw new Error('sin_motor'); }
+    montar();
+  }).catch(function(err){
+    var m = (err && err.message) || '', nm = (err && err.name) || '';
+    var msg = (m==='sin_plantilla') ? 'No encontré la plantilla de esta escuela en este equipo. Sube la versión más reciente de las plantillas.'
+      : (m==='no_datos' || m==='no_folio') ? 'No se encontraron los datos de esta credencial. Puede que se haya creado antes de la última actualización, o que ya se haya terminado.'
+      : (m==='sin_motor') ? 'No cargó el motor de credenciales. Recarga la página.'
+      : (nm==='AbortError') ? 'El servidor tardó demasiado en responder. Revisa tu internet e inténtalo otra vez.'
+      : 'No se pudo conectar. Revisa tu internet e inténtalo otra vez.';
+    wrap.innerHTML = '<h1>No se pudo cargar</h1><p class="sub">'+msg+'</p>'+
+      '<button id="reintentar" style="margin-top:16px;padding:11px 22px;border:none;border-radius:9px;background:#1f7a4d;color:#fff;font-weight:700;font-size:15px;cursor:pointer">↻ Reintentar</button>';
+    var rb=$('#reintentar'); if(rb) rb.onclick=cargarCredencial;
+  });
+}
+cargarCredencial();
+
+// Campos de foto que faltan (los que quedaron marcados como estudio)
+function fotosEstudio(){
+  return (plt.campos||[]).filter(function(c){
+    return c.tipo==='foto' && V[c.id] && V[c.id].estudio;
+  });
+}
+
+function montar(){
+  var h = '<h1>'+esc(E.corto||E.nombre)+' \u00b7 '+esc(plt.nombre)+'</h1>'+
+    '<p class="sub">Titular: <b>'+esc(nombreTitular())+'</b></p>'+
+    '<div class="cols">'+
+      '<div class="previa"><canvas id="lienzo"></canvas></div>'+
+      '<div class="panel" id="panel"></div>'+
+    '</div>';
+  wrap.innerHTML = h;
+  var panel = $('#panel');
+  var ph = '<div class="info">Corrige los datos y encuadra las fotos. Cuando quede bien, presiona <b>Guardar</b>.</div>';
+
+  var textos = (plt.campos||[]).filter(function(c){ return !c.fijo && (c.tipo==='texto'||c.tipo==='parrafo'||c.tipo==='lista'||c.tipo==='horario'); });
+  if (textos.length){
+    ph += '<div class="secc"><h3>Datos</h3>';
+    textos.forEach(function(c){
+      var val = V[c.id]!=null ? V[c.id] : '';
+      ph += '<label class="lb">'+esc(c.etiqueta)+'</label>';
+      if (c.tipo==='parrafo') ph += '<textarea data-txt="'+esc(c.id)+'">'+esc(val)+'</textarea>';
+      else if (c.tipo==='lista'){
+        ph += '<select data-txt="'+esc(c.id)+'"><option value="">\u2014</option>';
+        (c.opciones||[]).forEach(function(o){ ph += '<option'+(String(val)===String(o)?' selected':'')+'>'+esc(o)+'</option>'; });
+        ph += '</select>';
+      } else if (c.tipo==='horario'){
+        var pr=String(val).split(' a ');
+        ph += '<div class="hr"><input type="time" data-h1="'+esc(c.id)+'" value="'+esc(pr[0]||'')+'"> a <input type="time" data-h2="'+esc(c.id)+'" value="'+esc(pr[1]||'')+'"></div>';
+      } else ph += '<input type="text" data-txt="'+esc(c.id)+'" value="'+esc(val)+'">';
+    });
+    ph += '</div>';
+  }
+
+  var fotos  = (plt.campos||[]).filter(function(c){ return c.tipo==='foto'; });
+  var firmas = (plt.campos||[]).filter(function(c){ return c.tipo==='firma'; });
+
+  /* Fotos: primero las miniaturas (todas a la vista), y debajo el editor
+     de la que estés tocando. Así ya no hay que subir y bajar. */
+  if (fotos.length){
+    ph += '<div class="secc"><h3>Fotos</h3><div class="thumbs">';
+    fotos.forEach(function(c){
+      var v = V[c.id]||{}; var hay = !!v.src;
+      ph += '<button type="button" class="thumb'+(hay?'':' falta')+'" data-sel="'+esc(c.id)+'">'+
+        '<span class="th-im"'+(hay?(' style="background-image:url('+v.src+')"'):'')+'></span>'+
+        '<span class="th-nm">'+esc(c.etiqueta)+'</span></button>';
+    });
+    ph += '</div>';
+
+    fotos.forEach(function(c){
+      var v = V[c.id]||{}; var hay = !!v.src;
+      ph += '<div class="editor" id="ed_'+esc(c.id)+'" hidden data-c="'+esc(c.id)+'">'+
+        '<div class="cab"><b>'+esc(c.etiqueta)+'</b>'+
+          '<span style="display:flex;gap:6px">'+
+            '<button class="b" style="padding:6px 11px;font-size:12.5px" data-foto="'+esc(c.id)+'">'+
+            (hay?'\ud83d\udd04 Cambiar':'\ud83d\udce4 Subir')+'</button>'+
+            '<button class="b" style="padding:6px 11px;font-size:12.5px;background:#f7e0da;color:#a3431e"'+
+            ' data-quita="'+esc(c.id)+'"'+(hay?'':' hidden')+'>\ud83d\uddd1 Quitar</button>'+
+          '</span></div>'+
+        '<div class="ctrl" id="ctrl_'+esc(c.id)+'"'+(hay?'':' hidden')+'>'+
+          '<canvas class="fprev arrastra" id="prev_'+esc(c.id)+'" data-arr="'+esc(c.id)+'"></canvas>'+
+          '<p class="pista">\u270B Arrastre la foto para acomodarla, aqu\u00ed o en la credencial de la izquierda.</p>'+
+          '<label>Acercar</label><input type="range" min="100" max="240" value="'+Math.round((v.zoom||1)*100)+'" data-zoom="'+esc(c.id)+'">'+
+          '<label>Girar (enderezar) \u00b7 <span class="rotval" id="rotval_'+esc(c.id)+'">'+(v.rot||0)+'\u00b0</span></label>'+
+          '<input type="range" min="-15" max="15" step="0.5" value="'+(v.rot||0)+'" data-rot="'+esc(c.id)+'">'+
+          '<label>Brillo</label><input type="range" min="50" max="160" value="'+(v.brillo!=null?v.brillo:100)+'" data-brillo="'+esc(c.id)+'">'+
+          '<label>Contraste</label><input type="range" min="50" max="160" value="'+(v.contraste!=null?v.contraste:100)+'" data-contraste="'+esc(c.id)+'">'+
+          '<button class="b" style="margin-top:6px;font-size:12px;padding:5px 10px" data-rot0="'+esc(c.id)+'">\u21ba Enderezar a 0\u00b0</button>'+
+        '</div>'+
+        '<input type="file" accept="image/*" hidden id="file_'+esc(c.id)+'">'+
+      '</div>';
+    });
+    ph += '</div>';
+  }
+
+  /* Firma: se puede rehacer aquí mismo, con el dedo o subiendo una imagen */
+  if (firmas.length){
+    ph += '<div class="secc"><h3>Firma</h3>';
+    firmas.forEach(function(c){
+      var v = V[c.id]||{}; var hay = !!v.src;
+      ph += '<div class="campo"><h4>'+esc(c.etiqueta)+'</h4>'+
+        '<div class="frow">'+
+          '<span class="fmini" id="fmini_'+esc(c.id)+'"'+(hay?(' style="background-image:url('+v.src+')"'):'')+'></span>'+
+          '<button class="b" data-fdedo="'+esc(c.id)+'">\u270d\ufe0f '+(hay?'Rehacer':'Firmar')+'</button>'+
+          '<button class="b" data-fimg="'+esc(c.id)+'">\ud83d\udcc2 Subir imagen</button>'+
+          '<button class="b" style="background:#f7e0da;color:#a3431e" data-fquita="'+esc(c.id)+'"'+
+          (hay?'':' hidden')+'>\ud83d\uddd1 Quitar</button>'+
+        '</div>'+
+        '<p style="margin:6px 0 0;font-size:12px;color:var(--muted)">Sale en negro y sin fondo. El blanco del papel se quita solo.</p>'+
+        '<input type="file" accept="image/*" hidden id="ffile_'+esc(c.id)+'">'+
+      '</div>';
+    });
+    ph += '</div>';
+  }
+
+  ph += '<button class="b gr" id="bGuardar" style="background:#efe7d9;color:var(--tinta)">\ud83d\udcbe Guardar cambios</button>'+
+        '<p style="margin:6px 0 0;font-size:12px;color:var(--muted);text-align:center">Guarda tu avance. No se manda a imprimir todav\u00eda.</p>'+
+        '<button class="b ok gr" id="bEnviar">\u2713 Enviar a impresi\u00f3n</button>'+
+        '<p style="margin:6px 0 0;font-size:12px;color:var(--muted);text-align:center">Genera el ticket y la manda a imprimir.</p>';
+  panel.innerHTML = ph;
+
+  wrap.querySelectorAll('[data-txt]').forEach(function(el){
+    el.addEventListener('input', function(){ V[el.dataset.txt] = el.value; dibujar(); });
+  });
+  function actualizarHorario(id){
+    var a=wrap.querySelector('[data-h1="'+id+'"]'), b=wrap.querySelector('[data-h2="'+id+'"]');
+    V[id] = (a&&a.value?a.value:'') + ' a ' + (b&&b.value?b.value:''); dibujar();
+  }
+  wrap.querySelectorAll('[data-h1]').forEach(function(el){ el.addEventListener('input', function(){ actualizarHorario(el.dataset.h1); }); });
+  wrap.querySelectorAll('[data-h2]').forEach(function(el){ el.addEventListener('input', function(){ actualizarHorario(el.dataset.h2); }); });
+
+  /* Abrir una foto a la vez: el panel se queda corto y todo se ve */
+  function abrirEditor(id){
+    wrap.querySelectorAll('.editor').forEach(function(e){ e.hidden = (e.dataset.c !== id); });
+    wrap.querySelectorAll('.thumb').forEach(function(t){ t.classList.toggle('on', t.dataset.sel === id); });
+    if (id) previewFoto(id);
+  }
+  wrap.querySelectorAll('[data-sel]').forEach(function(t){
+    t.onclick = function(){
+      var abierto = t.classList.contains('on');
+      abrirEditor(abierto ? null : t.dataset.sel);   // volver a tocarla la cierra
+    };
+  });
+  // Arrancar con la primera que le falte foto; si todas tienen, ninguna abierta
+  (function(){
+    var falta = fotos.filter(function(c){ return !(V[c.id] && V[c.id].src); })[0];
+    if (falta) abrirEditor(falta.id);
+  })();
+
+  /* Quitar la foto: el recuadro se queda en blanco y se puede volver a subir */
+  wrap.querySelectorAll('[data-quita]').forEach(function(b){
+    b.onclick = function(){
+      var id = b.dataset.quita;
+      if (!confirm('¿Quitar esta fotografía? El recuadro se queda en blanco.')) return;
+      delete V[id];
+      var th = wrap.querySelector('.thumb[data-sel="'+id+'"]');
+      if (th){ th.classList.add('falta'); th.querySelector('.th-im').style.backgroundImage=''; }
+      var ct = document.getElementById('ctrl_'+id); if (ct) ct.hidden = true;
+      var bf = wrap.querySelector('[data-foto="'+id+'"]'); if (bf) bf.textContent='\ud83d\udce4 Subir';
+      b.hidden = true;
+      dibujar();
+      aviso('Fotografía quitada');
+    };
+  });
+
+  fotos.forEach(function(c){
+    $('[data-foto="'+c.id+'"]').onclick = function(){ document.getElementById('file_'+c.id).click(); };
+    document.getElementById('file_'+c.id).addEventListener('change', function(){
+      var f = this.files[0]; this.value=''; if(!f) return;
+      CEDULA.archivoAImagen(f, 1400, 0.9).then(function(r){
+        V[c.id] = { src:r.src, pos:50, posx:50, zoom:1, rot:0, brillo:100, contraste:100 };
+        return CEDULA.cargarImagen(r.src);
+      }).then(function(){
+        var th=wrap.querySelector('.thumb[data-sel="'+c.id+'"]');
+        if(th){ th.classList.remove('falta');
+                th.querySelector('.th-im').style.backgroundImage='url('+V[c.id].src+')'; }
+        var bf=wrap.querySelector('[data-foto="'+c.id+'"]'); if(bf) bf.textContent='\ud83d\udd04 Cambiar';
+        var bq=wrap.querySelector('[data-quita="'+c.id+'"]'); if(bq) bq.hidden=false;
+        var ctrl=document.getElementById('ctrl_'+c.id); if(ctrl) ctrl.hidden=false;
+        var sv=function(sel,val){ var s=wrap.querySelector(sel); if(s) s.value=val; };
+        sv('[data-zoom="'+c.id+'"]',100);
+        sv('[data-rot="'+c.id+'"]',0); sv('[data-brillo="'+c.id+'"]',100); sv('[data-contraste="'+c.id+'"]',100);
+        previewFoto(c.id); dibujar();
+      }).catch(function(){ aviso('No se pudo abrir esa imagen'); });
+    });
+  });
+
+  wrap.querySelectorAll('[data-zoom]').forEach(function(r){
+    r.addEventListener('input', function(){ var v=V[r.dataset.zoom]; if(v){ v.zoom=+r.value/100; previewFoto(r.dataset.zoom); dibujar(); } });
+  });
+  wrap.querySelectorAll('[data-rot]').forEach(function(r){
+    r.addEventListener('input', function(){
+      var v=V[r.dataset.rot]; if(v){ v.rot=+r.value;
+        var lbl=document.getElementById('rotval_'+r.dataset.rot);
+        if(lbl) lbl.textContent = (+r.value).toFixed(1)+'\u00b0';
+        previewFoto(r.dataset.rot); dibujar();
+      }
+    });
+  });
+  wrap.querySelectorAll('[data-brillo]').forEach(function(r){
+    r.addEventListener('input', function(){ var v=V[r.dataset.brillo]; if(v){ v.brillo=+r.value; previewFoto(r.dataset.brillo); dibujar(); } });
+  });
+  wrap.querySelectorAll('[data-contraste]').forEach(function(r){
+    r.addEventListener('input', function(){ var v=V[r.dataset.contraste]; if(v){ v.contraste=+r.value; previewFoto(r.dataset.contraste); dibujar(); } });
+  });
+  wrap.querySelectorAll('[data-rot0]').forEach(function(b){
+    b.onclick = function(){
+      var id=b.dataset.rot0, v=V[id]; if(!v) return; v.rot=0;
+      var sl=wrap.querySelector('[data-rot="'+id+'"]'); if(sl) sl.value=0;
+      var lbl=document.getElementById('rotval_'+id); if(lbl) lbl.textContent='0\u00b0';
+      previewFoto(id); dibujar();
+    };
+  });
+
+  // Dibujar preview de fotos que ya tienen imagen
+  fotos.forEach(function(c){ if(V[c.id] && V[c.id].src) previewFoto(c.id); });
+  conectarArrastreMini();
+
+  /* ---------------- FIRMA ---------------- */
+  function pintarMiniFirma(id){
+    var hay = !!(V[id] && V[id].src);
+    var m = document.getElementById('fmini_'+id);
+    if (m) m.style.backgroundImage = hay ? 'url('+V[id].src+')' : '';
+    var b = wrap.querySelector('[data-fdedo="'+id+'"]');
+    if (b) b.textContent = '\u270d\ufe0f ' + (hay ? 'Rehacer' : 'Firmar');
+    var q = wrap.querySelector('[data-fquita="'+id+'"]');
+    if (q) q.hidden = !hay;
+  }
+
+  // Subir una imagen de firma: se limpia sola (negro, sin fondo)
+  firmas.forEach(function(c){
+    var bi = wrap.querySelector('[data-fimg="'+c.id+'"]');
+    var inp = document.getElementById('ffile_'+c.id);
+    if (bi && inp){
+      bi.onclick = function(){ inp.click(); };
+      inp.addEventListener('change', function(){
+        var f = this.files[0]; this.value=''; if(!f) return;
+        CEDULA.archivoAImagen(f, 1400, 0.92)
+          .then(function(r){ return CEDULA.limpiarFirma(r.src); })
+          .then(function(limpia){ V[c.id] = { src: limpia }; return CEDULA.cargarImagen(limpia); })
+          .then(function(){ pintarMiniFirma(c.id); dibujar(); })
+          .catch(function(){ aviso('No se pudo abrir esa imagen'); });
+      });
+    }
+    var bd = wrap.querySelector('[data-fdedo="'+c.id+'"]');
+    if (bd) bd.onclick = function(){ abrirFirma(c.id); };
+    var bq = wrap.querySelector('[data-fquita="'+c.id+'"]');
+    if (bq) bq.onclick = function(){
+      if (!confirm('¿Quitar la firma? El espacio se queda en blanco.')) return;
+      delete V[c.id];
+      pintarMiniFirma(c.id);
+      bq.hidden = true;
+      dibujar();
+      aviso('Firma quitada');
+    };
+  });
+
+  window._pintarMiniFirma = pintarMiniFirma;   // lo usa el lienzo de firma
+
+  $('#bGuardar').onclick = function(){ enviarCredencial(false); };
+  $('#bEnviar').onclick  = function(){ enviarCredencial(true); };
+  dibujar();
+}
+
+function dibujar(){
+  CEDULA.precargar(plt, V).then(function(){
+    CEDULA.dibujar($('#lienzo'), plt, V, { escala: 1 });
+  });
+}
+// Vista previa en vivo de UNA foto (exacto cómo quedará en su recuadro)
+/* ============ LIENZO PARA FIRMAR ============ */
+var firmaCampo = null, fCtx = null, dibujandoF = false, huboTrazo = false;
+
+function abrirFirma(id){
+  firmaCampo = id;
+  document.getElementById('veloFirma').classList.add('on');
+  var cv = document.getElementById('firmaLienzo');
+  var r = cv.getBoundingClientRect(), k = Math.min(3, window.devicePixelRatio || 1) * 2;
+  cv.width = Math.round(r.width * k); cv.height = Math.round(r.height * k);
+  fCtx = cv.getContext('2d');
+  fCtx.setTransform(k, 0, 0, k, 0, 0);
+  fCtx.lineWidth = 2.6; fCtx.lineCap = 'round'; fCtx.lineJoin = 'round'; fCtx.strokeStyle = '#101010';
+  huboTrazo = false;
+}
+
+(function(){
+  var cv = document.getElementById('firmaLienzo');
+  if (!cv) return;
+  function pos(ev){ var r = cv.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+  cv.addEventListener('pointerdown', function(ev){
+    if (!fCtx) return;
+    dibujandoF = true; huboTrazo = true;
+    var p = pos(ev); fCtx.beginPath(); fCtx.moveTo(p.x, p.y);
+    cv.setPointerCapture(ev.pointerId); ev.preventDefault();
+  });
+  cv.addEventListener('pointermove', function(ev){
+    if (!dibujandoF) return;
+    var p = pos(ev); fCtx.lineTo(p.x, p.y); fCtx.stroke(); ev.preventDefault();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(function(e){
+    cv.addEventListener(e, function(){ dibujandoF = false; });
+  });
+
+  document.getElementById('fBorrar').onclick = function(){
+    fCtx.clearRect(0, 0, cv.width, cv.height); huboTrazo = false;
+  };
+  document.getElementById('fCancel').onclick = function(){
+    document.getElementById('veloFirma').classList.remove('on');
+  };
+  document.getElementById('fOk').onclick = function(){
+    if (!huboTrazo) return aviso('Dibuja la firma antes de continuar');
+    var url = recortarFirma(cv);
+    var id = firmaCampo;
+    CEDULA.limpiarFirma(url).then(function(limpia){
+      V[id] = { src: limpia };
+      return CEDULA.cargarImagen(limpia);
+    }).then(function(){
+      document.getElementById('veloFirma').classList.remove('on');
+      if (window._pintarMiniFirma) window._pintarMiniFirma(id);
+      dibujar();
+    });
+  };
+})();
+
+/* Recorta el lienzo a lo que realmente se dibujó */
+function recortarFirma(cv){
+  var ctx = cv.getContext('2d');
+  var d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+  var x0 = cv.width, y0 = cv.height, x1 = 0, y1 = 0, hay = false;
+  for (var y = 0; y < cv.height; y += 2){
+    for (var x = 0; x < cv.width; x += 2){
+      if (d[(y * cv.width + x) * 4 + 3] > 12){
+        hay = true;
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (!hay) return cv.toDataURL('image/png');
+  var m = 14;
+  x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m);
+  x1 = Math.min(cv.width, x1 + m); y1 = Math.min(cv.height, y1 + m);
+  var out = document.createElement('canvas');
+  out.width = x1 - x0; out.height = y1 - y0;
+  out.getContext('2d').drawImage(cv, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out.toDataURL('image/png');
+}
+
+/* ═══════════════ ARRASTRAR LA FOTO ═══════════════
+   Se puede acomodar de dos formas, la que sea más cómoda:
+     · en la miniatura de los controles
+     · directo sobre la credencial, que es más preciso
+   ═══════════════════════════════════════════════════ */
+var arr = null;   // { id, x, y, anchoCaja, altoCaja }
+
+function campoPorId(id){
+  return (plt.campos||[]).filter(function(c){ return c.id===id; })[0];
+}
+
+function moverFoto(id, dx, dy, anchoCaja, altoCaja){
+  var c = campoPorId(id); if(!c || !V[id]) return;
+  var movio = CEDULA.arrastrarFoto(c, V[id], plt, dx/anchoCaja, dy/altoCaja);
+  if(movio){ previewFoto(id); dibujar(); }
+}
+
+/* ---- en la miniatura de los controles ---- */
+function conectarArrastreMini(){
+  wrap.querySelectorAll('.fprev.arrastra').forEach(function(cv){
+    if(cv._listo) return; cv._listo = true;
+    cv.addEventListener('pointerdown', function(ev){
+      var id = cv.dataset.arr; if(!V[id] || !V[id].src) return;
+      ev.preventDefault();
+      try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+      var r = cv.getBoundingClientRect();
+      arr = { id:id, x:ev.clientX, y:ev.clientY, aw:r.width, ah:r.height, donde:cv };
+    });
+    cv.addEventListener('pointermove', function(ev){
+      if(!arr || arr.donde !== cv) return;
+      ev.preventDefault();
+      moverFoto(arr.id, ev.clientX-arr.x, ev.clientY-arr.y, arr.aw, arr.ah);
+      arr.x = ev.clientX; arr.y = ev.clientY;
+    });
+    ['pointerup','pointercancel'].forEach(function(e){
+      cv.addEventListener(e, function(){ if(arr && arr.donde===cv) arr = null; });
+    });
+  });
+}
+
+/* ---- directo sobre la credencial ---- */
+(function(){
+  var cv = document.getElementById('lienzo');
+  if(!cv) return;
+
+  function puntoEnPlantilla(ev){
+    var r = cv.getBoundingClientRect();
+    return { px:(ev.clientX-r.left)/r.width*100, py:(ev.clientY-r.top)/r.height*100, r:r };
+  }
+
+  cv.addEventListener('pointerdown', function(ev){
+    var p = puntoEnPlantilla(ev);
+    var c = CEDULA.campoEnPunto(plt, p.px, p.py, V);
+    if(!c) return;
+    ev.preventDefault();
+    try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+    // El recuadro del campo, en píxeles de pantalla
+    arr = { id:c.id, x:ev.clientX, y:ev.clientY,
+            aw: p.r.width  * c.w/100,
+            ah: p.r.height * c.h/100,
+            donde: cv };
+    cv.classList.add('arrastrando');
+    // Se abre su editor, para ver qué se está moviendo
+    if(typeof abrirEditor === 'function') abrirEditor(c.id);
+  });
+
+  cv.addEventListener('pointermove', function(ev){
+    if(arr && arr.donde === cv){
+      ev.preventDefault();
+      moverFoto(arr.id, ev.clientX-arr.x, ev.clientY-arr.y, arr.aw, arr.ah);
+      arr.x = ev.clientX; arr.y = ev.clientY;
+      return;
+    }
+    // Sin arrastrar: la manita solo cuando hay foto debajo
+    var p = puntoEnPlantilla(ev);
+    cv.classList.toggle('sobrefoto', !!CEDULA.campoEnPunto(plt, p.px, p.py, V));
+  });
+
+  ['pointerup','pointercancel','pointerleave'].forEach(function(e){
+    cv.addEventListener(e, function(){
+      if(arr && arr.donde===cv) arr = null;
+      cv.classList.remove('arrastrando');
+    });
+  });
+})();
+
+function previewFoto(id){
+  var campo = (plt.campos||[]).filter(function(c){ return c.id===id; })[0];
+  var canvas = document.getElementById('prev_'+id);
+  if (!campo || !canvas || !V[id] || !V[id].src) return;
+  CEDULA.cargarImagen(V[id].src).then(function(){
+    CEDULA.dibujarFotoPreview(canvas, campo, V[id], { ancho: 300, plantilla: plt });
+  }).catch(function(){});
+}
+
+function nombreTitular(){
+  var t = '';
+  (plt.campos||[]).some(function(c){
+    if ((c.tipo==='texto'||c.tipo==='parrafo') && /nombre/i.test(c.etiqueta||'') && V[c.id]){ t=String(V[c.id]).trim(); return true; }
+    return false;
+  });
+  return t || (meta.customer || 'SIN NOMBRE');
+}
+function metaTel(){ return meta.telefono || ''; }
+
+/* El JPEG no guarda transparencia: una firma (trazo negro sobre fondo
+   transparente) se volvería un cuadro NEGRO. Por eso las firmas van en
+   PNG y las fotos en JPEG, que pesa menos.                            */
+function comprimirSrc(src, maxLado, conFondo){
+  return new Promise(function(res){
+    if (!src || String(src).indexOf('data:') !== 0) return res(src);
+    var img = new Image();
+    img.onload = function(){
+      var w=img.width, h=img.height, sc=Math.min(1, maxLado/Math.max(w,h));
+      w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      try{ res(conFondo ? c.toDataURL('image/png') : c.toDataURL('image/jpeg',0.85)); }
+      catch(e){ res(src); }
+    };
+    img.onerror=function(){ res(src); };
+    img.src=src;
+  });
+}
+/* La plantilla de gafete de esta escuela, si es que lleva.
+   Manda la marca del admin; si no hay, se busca por el nombre (escuelas
+   de antes). Devuelve null si esta escuela no maneja gafete, o si la que
+   se está llenando YA es el gafete.                                    */
+
+/* Saca la "sala" (o grado, o grupo) de lo que se llenó.
+   Sirve para clasificar el historial de credenciales.   */
+function salaDeLosDatos(campos, valores){
+  var busca = /\b(sala|grado|grupo|nivel)\b/i;
+  var hallado = '';
+  (campos||[]).forEach(function(c){
+    if (hallado) return;
+    if (c.tipo === 'foto' || c.tipo === 'firma') return;
+    if (!busca.test(String(c.etiqueta||''))) return;
+    var v = valores[c.id];
+    if (typeof v === 'string' && v.trim()) hallado = v.trim();
+  });
+  return hallado;
+}
+
+function gafeteDeLaEscuela(){
+  if (!E || !E.plantillas) return null;
+  var marcada  = E.plantillas.filter(function(t){ return t.gafete; })[0];
+  var porNombre = E.plantillas.filter(function(t){ return /gafete/i.test(t.nombre); })[0];
+  var g = marcada || porNombre;
+  if (!g) return null;
+  if (plt && g.id === plt.id) return null;   // ya se está llenando el gafete
+  return g;
+}
+
+function valoresLigeros(V){
+  var claves=Object.keys(V);
+  var esFirma={};
+  (plt && plt.campos ? plt.campos : []).forEach(function(c){ if(c.tipo==='firma') esFirma[c.id]=true; });
+  if (E && E.plantillas) E.plantillas.forEach(function(p){
+    (p.campos||[]).forEach(function(c){ if(c.tipo==='firma') esFirma[c.id]=true; });
+  });
+
+  return Promise.all(claves.map(function(k){
+    var v=V[k];
+    if (v && typeof v==='object' && v.src){
+      var firma=!!esFirma[k];
+      return comprimirSrc(v.src, firma?900:1100, firma).then(function(s){ var v2={}; for(var kk in v) v2[kk]=v[kk]; v2.src=s; return [k,v2]; });
+    }
+    return Promise.resolve([k,v]);
+  })).then(function(pares){ var out={}; pares.forEach(function(p){ out[p[0]]=p[1]; }); return out; });
+}
+
+/* Un solo camino para las dos cosas:
+     aImpresion = false -> GUARDAR: se conserva el avance, sigue pendiente,
+                           el Vigilante NO se la lleva. Se puede seguir editando.
+     aImpresion = true  -> ENVIAR: se genera el ticket y se manda a imprimir. */
+function enviarCredencial(aImpresion){
+
+  wrap.innerHTML = '<div class="estado"><div class="rueda"></div><p>' +
+    (aImpresion ? 'Generando la credencial y envi\u00e1ndola a impresi\u00f3n.'
+                : 'Guardando tus cambios.') +
+    '<br>No cierres esta p\u00e1gina.</p></div>';
+
+  /* Documentos a generar: la credencial y, si la escuela lo exige, el gafete.
+
+     ANTES esto dependía de meta.gafete, o sea de que quien creó la
+     credencial lo hubiera pedido. Si venía de un camino que no lo marcó
+     (una credencial vieja, o creada por otro lado), el gafete NO se hacía
+     aunque la escuela lo exigiera.
+
+     AHORA manda la escuela: si tiene su plantilla de gafete marcada, se
+     genera SIEMPRE, con los mismos datos.                              */
+  var docs = [plt];
+  var gafetePlt = gafeteDeLaEscuela();
+  if (gafetePlt) docs.push(gafetePlt);
+  var fmt = D.formato || 'jpeg';
+
+  Promise.all(docs.map(function(d){ return CEDULA.precargar(d, V); })).then(function(){
+    var imagenes = docs.map(function(d){
+      var c = document.createElement('canvas');
+      CEDULA.dibujar(c, d, V, { escala: 1 });
+      var r = CEDULA.exportar(c, fmt, 0.95);
+      return { nombre:d.nombre, datos:r.base64, mime:r.mime, ext:r.ext, ancho:c.width, alto:c.height, ppp:r.ppp };
+    });
+    return valoresLigeros(V).then(function(vLig){
+      var carga = {
+        action:'credencial',
+        folio: folio,                      // MISMO folio: reusa la carpeta
+        customer: nombreTitular(),
+        telefono: meta.telefono || '',
+        escuela: (E.nombre||''), corto:(E.corto||E.nombre), codigo:(E.codigo||E.id),
+        documento: plt.nombre,
+        sala: salaDeLosDatos(plt.campos, V),
+        imagenes: imagenes,
+        cantidad: meta.cantidad || 1,
+        gafete: !!gafetePlt,
+        detalle: [{ tam:'Credencial · '+(E.corto||E.nombre), cant:(meta.cantidad||1), importe:0 }],
+        total: 0,
+        // Al GUARDAR se queda pendiente: el servidor no crea LISTO.txt y el
+        // Vigilante no se la lleva. Al ENVIAR sí, y se va a impresión.
+        pendiente_estudio: !aImpresion,
+        pend_data: { codigo:(E.codigo||E.id), documento:plt.nombre, plantillaId:plt.id,
+                     cantidad:(meta.cantidad||1), gafete:!!gafetePlt, valores:vLig },
+        enviado: new Date().toISOString()
+      };
+      return fetch(CRED_BACKEND, {
+        method:'POST', redirect:'follow',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(carga)
+      }).then(function(r){ return r.json(); });
+    });
+  }).then(function(res){
+    if (res && res.ok===false) throw new Error(res.error||'error');
+
+    if (aImpresion){
+      wrap.innerHTML = '<div class="estado"><h1>\u2713 Credencial enviada</h1>'+
+        '<p class="sub">Se mand\u00f3 a impresi\u00f3n. Puedes cerrar esta ventana y volver al Punto de Venta.</p></div>';
+    } else {
+      // Guardar: se rearma el editor para seguir trabajando
+      montar();
+      aviso('\u2713 Cambios guardados. Todav\u00eda no se manda a imprimir.');
+    }
+  }).catch(function(){
+    if (aImpresion){
+      wrap.innerHTML = '<div class="estado"><h1>No se pudo enviar</h1>'+
+        '<p class="sub">Revisa tu internet e int\u00e9ntalo de nuevo.</p>'+
+        '<button class="b pri" onclick="location.reload()">Reintentar</button></div>';
+    } else {
+      // Al guardar, nunca se pierde el trabajo: se regresa al editor
+      montar();
+      aviso('No se pudo guardar. Revisa tu internet.');
+    }
+  });
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+})();
+</script>
+</body>
+</html>
